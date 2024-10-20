@@ -1,8 +1,35 @@
-export function add(a: number, b: number): number {
-  return a + b;
+// @deno-types="npm:@types/express@5.0.0"
+import express from "express";
+import process from "node:process";
+import { contextMiddleware } from "./context.middleware.ts";
+import { messagingRouter } from "./messages/messaging.router.ts";
+
+const PORT = process.env.PORT || 3001;
+
+function main() {
+  const app = express();
+
+  app.use(contextMiddleware);
+  app.use(express.json());
+
+  app.get("/services", (_req, res) => {
+    res.status(200).json([
+      {
+        id: "messaging",
+        name: "OAI Messaging",
+      },
+    ]);
+  });
+
+  app.use("/services/messaging", messagingRouter);
+
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
 }
 
-// Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 if (import.meta.main) {
-  console.log("Add 2 + 3 =", add(2, 3));
+  main();
+} else {
+  // Module not being run as main, so no need to start server.
 }
