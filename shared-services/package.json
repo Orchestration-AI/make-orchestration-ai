@@ -1,0 +1,23 @@
+{
+  "name": "oao-shared-services",
+  "version": "0.1.0",
+  "description": "The shared services for orchestration ai.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Orchestration-AI/make-orchestration-ai.git"
+  },
+  "author": "Orchestration AI",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Orchestration-AI/make-orchestration-ai/issues"
+  },
+  "homepage": "https://github.com/Orchestration-AI/make-orchestration-ai#readme",
+  "dependencies": {
+    "expressjs": "^1.0.1"
+  }
+}
