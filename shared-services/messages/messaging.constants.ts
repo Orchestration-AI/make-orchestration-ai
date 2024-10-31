@@ -1,6 +1,6 @@
 import type { Setting } from "../types.ts";
 
-export const asyncMessagingSettingKey = "Async messaging";
+export const asyncMessagingSettingKey = "ASYNC_MESSAGING";
 
 export const defaultSettings: Setting[] = [
   {

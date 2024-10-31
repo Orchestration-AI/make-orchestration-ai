@@ -15,7 +15,7 @@ function main() {
   app.get("/services", (_req, res) => {
     res.status(200).json([
       {
-        id: "messaging",
+        unique_name: "messaging",
         name: "OAI Messaging",
       },
     ]);
