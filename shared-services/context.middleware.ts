@@ -1,7 +1,8 @@
 // @deno-types="npm:@types/express@5.0.0"
 import { type NextFunction, type Request, type Response } from "express";
+import process from "node:process";
 
-export const contextMiddleware = (
+export const contextMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -9,9 +10,16 @@ export const contextMiddleware = (
   const layerId = req.get("X-LayerId");
 
   if (layerId) {
-    // TODO: Fetch data and build context
-    // <--- We are here
-    res.locals.context = {};
+    const endpoint = `${process.env.ENGINE_URL}/context/${layerId}`;
+    const response = await (
+      await fetch(endpoint, {
+        headers: {
+          Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
+        },
+      })
+    ).json();
+
+    res.locals.context = response;
   } else {
     // This call does not come from an agent. Depending on the service, such calls
     // can be ignored or flag an error.

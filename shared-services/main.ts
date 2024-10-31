@@ -16,7 +16,8 @@ function main() {
     res.status(200).json([
       {
         unique_name: "messaging",
-        name: "OAI Messaging",
+        service_name: "OAI Messaging",
+        service_description: "Inter agent communication."
       },
     ]);
   });

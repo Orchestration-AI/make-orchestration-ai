@@ -58,7 +58,7 @@ async function messageLayerByIndex(
   settings: Setting[]
 ) {
   const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
-  const inferenceEndpointPrefix = getRequiredEnvValue("INFERENCE_URL_PREFIX");
+  const inferenceEndpointPrefix = getRequiredEnvValue("ENGINE_URL");
   const endpoint = `${inferenceEndpointPrefix}/agents/${recepientAgentId}/layers/${recepientLayerIndex}/messages`;
 
   const responsePromise = fetch(endpoint, {
