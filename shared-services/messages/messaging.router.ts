@@ -45,6 +45,7 @@ messagingRouter.post("/api/touch", async (_req: Request, res: Response) => {
             method: "POST",
             body: JSON.stringify(links),
             headers: {
+              Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
               "Content-Type": "application/json",
               "X-LayerId": context.identity.layerId,
             },
@@ -59,6 +60,7 @@ messagingRouter.post("/api/touch", async (_req: Request, res: Response) => {
             method: "POST",
             body: JSON.stringify(endpoints),
             headers: {
+              Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
               "Content-Type": "application/json",
               "X-LayerId": context.identity.layerId,
             },
