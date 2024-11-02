@@ -10,7 +10,7 @@ export const contextMiddleware = async (
   const layerId = req.get("X-LayerId");
 
   if (layerId) {
-    const endpoint = `${process.env.ENGINE_URL}/context/${layerId}`;
+    const endpoint = `${process.env.ENGINE_URL}/agents/context/${layerId}`;
     const response = await (
       await fetch(endpoint, {
         headers: {
