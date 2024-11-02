@@ -31,7 +31,7 @@ messagingRouter.post("/api/touch", async (_req: Request, res: Response) => {
   const endpoints = [
     {
       description:
-        "Make a POST request to this endpoint. The body should be an array of objects where each object has string message field.",
+        "Make a POST request to this endpoint to message the agent. The body should be an array of objects where each object has string message field.",
       endpoint: `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/layers/0/messages`,
     },
   ];
