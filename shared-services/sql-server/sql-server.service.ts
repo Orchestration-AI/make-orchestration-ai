@@ -20,9 +20,10 @@ export async function runQuery(query: string, context: Context) {
   const pool = new sql.ConnectionPool(
     sql.ConnectionPool.parseConnectionString(connString)
   );
-  pool.connect();
+  await pool.connect();
 
   const tx = pool.transaction();
+  await tx.begin();
   try {
     if (removeBackslashes) {
       query = query.replace(/\\'/g, "'");
@@ -34,13 +35,13 @@ export async function runQuery(query: string, context: Context) {
     const response = await request.query(query);
     const out = response.recordset;
 
-    tx.commit();
-    pool.close();
+    await tx.commit();
+    await pool.close();
 
     return out;
   } catch (e) {
-    tx.rollback();
-    pool.close();
+    await tx.rollback();
+    await pool.close();
 
     throw e;
   }
