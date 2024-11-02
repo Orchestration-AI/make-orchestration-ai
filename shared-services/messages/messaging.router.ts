@@ -38,35 +38,31 @@ messagingRouter.post("/api/touch", async (_req: Request, res: Response) => {
 
   try {
     const promises = [
-      (
-        await fetch(
-          `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/links`,
-          {
-            method: "POST",
-            body: JSON.stringify(links),
-            headers: {
-              Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
-              "Content-Type": "application/json",
-              "X-LayerId": context.identity.layerId,
-            },
-          }
-        )
-      ).text(),
+      fetch(
+        `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/links`,
+        {
+          method: "POST",
+          body: JSON.stringify(links),
+          headers: {
+            Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
+            "Content-Type": "application/json",
+            "X-LayerId": context.identity.layerId,
+          },
+        }
+      ),
 
-      (
-        await fetch(
-          `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/endpoints`,
-          {
-            method: "POST",
-            body: JSON.stringify(endpoints),
-            headers: {
-              Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
-              "Content-Type": "application/json",
-              "X-LayerId": context.identity.layerId,
-            },
-          }
-        )
-      ).text(),
+      fetch(
+        `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/endpoints`,
+        {
+          method: "POST",
+          body: JSON.stringify(endpoints),
+          headers: {
+            Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
+            "Content-Type": "application/json",
+            "X-LayerId": context.identity.layerId,
+          },
+        }
+      ),
     ];
 
     await Promise.all(promises);
