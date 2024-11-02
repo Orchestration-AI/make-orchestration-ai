@@ -18,16 +18,6 @@ messagingRouter.get("/api/default-settings", (_req: Request, res: Response) => {
 
 messagingRouter.post("/api/touch", async (_req: Request, res: Response) => {
   const context: Context = res.locals.context;
-
-  const links = [
-    {
-      link_description:
-        "Follow this link to chat to the agent using your voice.",
-      link_name: "Chat to agent",
-      link_url: `${process.env.MESSAGING_SERVICE_APP_HOME_URL}?layerId=${context.identity.layerId}`,
-    },
-  ];
-
   const endpoints = [
     {
       description:
@@ -38,19 +28,6 @@ messagingRouter.post("/api/touch", async (_req: Request, res: Response) => {
 
   try {
     const promises = [
-      fetch(
-        `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/links`,
-        {
-          method: "POST",
-          body: JSON.stringify(links),
-          headers: {
-            Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
-            "Content-Type": "application/json",
-            "X-LayerId": context.identity.layerId,
-          },
-        }
-      ),
-
       fetch(
         `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/endpoints`,
         {

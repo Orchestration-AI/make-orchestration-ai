@@ -4,6 +4,7 @@
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@1",
-    "express": "npm:express@5.0.0"
+    "express": "npm:express@5.0.0",
+    "socket.io": "npm:socket.io@^4.8.1"
   }
 }

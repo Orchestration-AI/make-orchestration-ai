@@ -3,11 +3,16 @@ import express from "express";
 import process from "node:process";
 import { contextMiddleware } from "./context.middleware.ts";
 import { messagingRouter } from "./messages/messaging.router.ts";
+import { voiceRouter } from "./voice/voice.router.ts";
+import { Server } from "socket.io";
+import { createServer } from "node:http";
+import { addSocket } from "./voice/voice.service.ts";
 
 const PORT = process.env.PORT || 3001;
 
 function main() {
   const app = express();
+  const server = createServer(app);
 
   app.use(contextMiddleware);
   app.use(express.json());
@@ -17,14 +22,27 @@ function main() {
       {
         unique_name: "messaging",
         service_name: "OAI Messaging",
-        service_description: "Inter agent communication."
+        service_description: "Inter agent communication.",
+      },
+      {
+        unique_name: "voice",
+        service_name: "OAI Voice",
+        service_description: "Voice communication with the user.",
       },
     ]);
   });
 
   app.use("/services/messaging", messagingRouter);
+  app.use("/services/voice", voiceRouter);
 
-  app.listen(PORT, () => {
+  app.use("/services/voice/chat", express.static("./voice/public"));
+
+  const voiceIo = new Server(server, {
+    path: "/hooks/voice-io",
+  });
+  voiceIo.on("connection", addSocket);
+
+  server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });
 }
