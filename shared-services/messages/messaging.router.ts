@@ -68,6 +68,7 @@ messagingRouter.post("/api/touch", async (_req: Request, res: Response) => {
     await Promise.all(promises);
     res.status(204).send();
   } catch (e) {
+    console.warn(e);
     res.status(500).send(`${e}`);
   }
 });
@@ -84,6 +85,7 @@ messagingRouter.post(
       );
       res.status(200).send(response);
     } catch (e) {
+      console.warn(e);
       res.status(500).send(`${e}`);
     }
   }
@@ -97,6 +99,7 @@ messagingRouter.post(
       const response = await messageLayerBelow(req.body.message, context);
       res.status(200).send(response);
     } catch (e) {
+      console.warn(e);
       res.status(500).send(`${e}`);
     }
   }
@@ -110,6 +113,7 @@ messagingRouter.post(
       const response = await messageLayerAbove(req.body.message, context);
       res.status(200).send(response);
     } catch (e) {
+      console.warn(e);
       res.status(500).send(`${e}`);
     }
   }
