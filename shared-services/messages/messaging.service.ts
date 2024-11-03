@@ -21,7 +21,7 @@ export function messageLayerBelow(message: string, context: Context) {
     context.identity.layerId,
     context.identity.agentId,
     layerBelowIndex,
-    context.settings
+    false
   );
 }
 
@@ -32,7 +32,7 @@ export function messageLayerAbove(message: string, context: Context) {
     context.identity.layerId,
     context.identity.agentId,
     layerAboveIndex,
-    context.settings
+    false
   );
 }
 
@@ -46,7 +46,7 @@ export function messageOtherAgent(
     context.identity.layerId,
     otherAgentId,
     0,
-    context.settings
+    asyncMessagingEnabled(context.settings)
   );
 }
 
@@ -55,7 +55,7 @@ async function messageLayerByIndex(
   sendingLayerId: string,
   recepientAgentId: string,
   recepientLayerIndex: number,
-  settings: Setting[]
+  sendAsync: boolean
 ) {
   const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
   const inferenceEndpointPrefix = getRequiredEnvValue("ENGINE_URL");
@@ -71,7 +71,7 @@ async function messageLayerByIndex(
     },
   });
 
-  if (asyncMessagingEnabled(settings)) {
+  if (sendAsync) {
     responsePromise
       .then((response) => {
         console.info(`Async response received. Status ${response.status}.`);
