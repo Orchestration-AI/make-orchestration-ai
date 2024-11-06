@@ -1,6 +1,3 @@
-// @deno-types=npm:@types/nodemailer@6.4.16
-import nodemailer from "nodemailer";
-
 // @deno-types=npm:@types/showdown@2.0.6
 import showdown from "showdown";
 import { Setting } from "../types.ts";
