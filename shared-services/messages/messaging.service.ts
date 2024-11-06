@@ -61,6 +61,14 @@ async function messageLayerByIndex(
   const inferenceEndpointPrefix = getRequiredEnvValue("ENGINE_URL");
   const endpoint = `${inferenceEndpointPrefix}/agents/${recepientAgentId}/layers/${recepientLayerIndex}/messages`;
 
+  console.log({
+    message,
+    sendingLayerId,
+    recepientAgentId,
+    recepientLayerIndex,
+    sendAsync,
+  });
+
   const responsePromise = fetch(endpoint, {
     method: "POST",
     body: JSON.stringify([{ message }]),
@@ -82,6 +90,7 @@ async function messageLayerByIndex(
     return "MESSAGE_RECEIVED";
   } else {
     const response = await responsePromise;
+    console.log(response);
     return response.text();
   }
 }
