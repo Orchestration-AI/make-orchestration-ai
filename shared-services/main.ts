@@ -8,6 +8,7 @@ import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { addSocket } from "./voice/voice.service.ts";
 import { sqlServerRouter } from "./sql-server/sql-server.router.ts";
+import { mailRouter } from "./mail/mail.router.ts";
 
 const PORT = process.env.PORT || 3001;
 
@@ -34,13 +35,19 @@ function main() {
         unique_name: "sql-server",
         service_name: "OAI Sql Server",
         service_description: "Run queries on a SQL Server database.",
-      },      
+      },
+      {
+        unique_name: "mail",
+        service_name: "OAI Mail",
+        service_description: "Send emails email via SMTP.",
+      },        
     ]);
   });
 
   app.use("/services/messaging", messagingRouter);
   app.use("/services/voice", voiceRouter);
   app.use("/services/sql-server", sqlServerRouter);
+  app.use("/services/mail", mailRouter);
 
   app.use("/services/voice/chat", express.static("./voice/public"));
 

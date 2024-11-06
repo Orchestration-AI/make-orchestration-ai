@@ -5,7 +5,7 @@ import type { Socket } from "socket.io";
 
 let sockets: Socket[] = [];
 
-async function sendMessageToAgent(message: string, context: Context) {
+export async function sendMessageToAgent(message: string, context: Context) {
   const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
   const inferenceEndpointPrefix = getRequiredEnvValue("ENGINE_URL");
   const endpoint = `${inferenceEndpointPrefix}/agents/${context.identity.agentId}/layers/0/messages`;
