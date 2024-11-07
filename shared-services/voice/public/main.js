@@ -48,6 +48,7 @@ recognition.addEventListener("result", (event) => {
 
 const startButton = document.getElementById("start-button");
 const stopButton = document.getElementById("stop-button");
+const promptInput = document.getElementById("prompt");
 
 startButton.addEventListener("click", () => {
   recognition.start();
@@ -57,4 +58,13 @@ startButton.addEventListener("click", () => {
 stopButton.addEventListener("click", () => {
   recognition.stop();
   setStatus("Speech Paused");
+});
+
+promptInput.addEventListener("keydown", async (event) => {
+  if ((event.keyCode == 10 || event.keyCode == 13) && event.ctrlKey) {
+    await sendMessageToAgent(event.target.value);
+    event.target.value = '';
+  } else {
+    // Not the key combination we want to submit. So ignore.
+  }
 });

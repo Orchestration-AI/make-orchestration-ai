@@ -16,9 +16,18 @@ h1 {
   margin-top: 0;
 }
 
+h2 {
+  color: white;
+}
+
+#prompt {
+  font-size: 2em;
+}
+
 #msg {
   font-size: 0.9em;
   line-height: 1.4em;
+  color: white;
 }
 
 button {
