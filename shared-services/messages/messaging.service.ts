@@ -15,6 +15,7 @@ function asyncMessagingEnabled(settings: Setting[]): boolean {
 }
 
 export function messageLayerBelow(message: string, context: Context) {
+  console.log("Messaging layer below");
   const layerBelowIndex = context.identity.layerIndex + 1;
   return messageLayerByIndex(
     message,
@@ -26,6 +27,7 @@ export function messageLayerBelow(message: string, context: Context) {
 }
 
 export function messageLayerAbove(message: string, context: Context) {
+  console.log("Messaging layer above");
   const layerAboveIndex = context.identity.layerIndex - 1;
   return messageLayerByIndex(
     message,
@@ -41,6 +43,7 @@ export function messageOtherAgent(
   otherAgentId: string,
   context: Context
 ) {
+  console.log("Messaging other agent");
   return messageLayerByIndex(
     message,
     context.identity.layerId,
@@ -60,6 +63,14 @@ async function messageLayerByIndex(
   const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
   const inferenceEndpointPrefix = getRequiredEnvValue("ENGINE_URL");
   const endpoint = `${inferenceEndpointPrefix}/agents/${recepientAgentId}/layers/${recepientLayerIndex}/messages`;
+
+  console.log({
+    message,
+    sendingLayerId,
+    recepientAgentId,
+    recepientLayerIndex,
+    sendAsync,
+  });
 
   const responsePromise = fetch(endpoint, {
     method: "POST",
@@ -82,6 +93,7 @@ async function messageLayerByIndex(
     return "MESSAGE_RECEIVED";
   } else {
     const response = await responsePromise;
+    console.log(response);
     return response.text();
   }
 }

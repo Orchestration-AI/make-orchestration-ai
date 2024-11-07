@@ -15,6 +15,7 @@ sqlServerRouter.post("/api/run_query", async (req: Request, res: Response) => {
   const context: Context = res.locals.context;
 
   try {
+    console.log(req.body.query);
     const results = await runQuery(req.body.query, context);
     res.status(200).json(results);
   } catch (e) {
