@@ -57,7 +57,7 @@ messagingRouter.post(
     try {
       const response = await messageOtherAgent(
         req.body.message,
-        req.body.otherAgentId,
+        req.body.agentId,
         context
       );
       res.status(200).send(response);
