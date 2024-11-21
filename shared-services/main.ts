@@ -9,6 +9,7 @@ import { createServer } from "node:http";
 import { addSocket } from "./voice/voice.service.ts";
 import { sqlServerRouter } from "./sql-server/sql-server.router.ts";
 import { mailRouter } from "./mail/mail.router.ts";
+import { webhookRouter } from "./webhook/webhook.router.ts";
 
 const PORT = process.env.PORT || 3001;
 
@@ -40,7 +41,12 @@ function main() {
         unique_name: "mail",
         service_name: "OAI Mail",
         service_description: "Send emails email via SMTP.",
-      },        
+      },
+      {
+        unique_name: "webhook",
+        service_name: "OAI Webhook",
+        service_description: "Allows agents to receive JSON webhook events.",
+      }
     ]);
   });
 
@@ -48,6 +54,7 @@ function main() {
   app.use("/services/voice", voiceRouter);
   app.use("/services/sql-server", sqlServerRouter);
   app.use("/services/mail", mailRouter);
+  app.use("/services/webhook", webhookRouter);
 
   app.use("/services/voice/chat", express.static("./voice/public"));
 

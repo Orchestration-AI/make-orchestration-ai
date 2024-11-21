@@ -6,6 +6,7 @@ import process from "node:process";
 import { sendMarkdownMail } from "./mail.service.ts";
 import { sendMessageToAgent } from "../voice/voice.service.ts";
 import { getContext } from "../context.middleware.ts";
+import { getDescriptionForContext } from "./mail.description.ts";
 
 export const mailRouter = Router();
 
@@ -107,4 +108,9 @@ mailRouter.post("/api/zapier/:layerId", async (req: Request, res: Response) => {
     console.warn(e);
     res.status(500).send(`${e}`);
   }
+});
+
+mailRouter.get("/api/description", (_req: Request, res: Response) => {
+  const context: Context = res.locals.context;
+  res.status(200).send(getDescriptionForContext(context));
 });
