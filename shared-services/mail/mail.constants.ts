@@ -6,6 +6,7 @@ export const smtpUserSettingKey = "SMTP_USER";
 export const smtpPasswordSettingKey = "SMTP_PASSWORD";
 export const smtpSecureSettingKey = "SMTP_SECURE";
 export const smtpSelfEmailSettingKey = "SMTP_SELF_EMAIL";
+export const autoSendSettingKey = "AUTO_SEND";
 
 export const defaultSettings: Setting[] = [
   {
@@ -44,4 +45,11 @@ export const defaultSettings: Setting[] = [
     setting_type: "Text",
     text_value: '',
   },
+  {
+    setting_name: autoSendSettingKey,
+    setting_description:
+      "When true, the agent will be able to autonomously send emails. When false, the agent can only reply to emails.",
+    setting_type: "Boolean",
+    boolean_value: false,
+  },  
 ];

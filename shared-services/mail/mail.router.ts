@@ -53,6 +53,8 @@ mailRouter.post("/api/send_email", async (req: Request, res: Response) => {
     await sendMarkdownMail(
       req.body.body,
       req.body.to,
+      req.body.cc,
+      req.body.bcc,
       req.body.subject,
       context.settings
     );
@@ -69,16 +71,33 @@ mailRouter.post("/api/zapier/:layerId", async (req: Request, res: Response) => {
   try {
     const markdownBody = req.body.body;
     const from = req.body.from;
+    const cc = req.body.cc;
+    const bcc = req.body.bcc;
     const subject = req.body.subject;
 
+    let message = `New e-mail from ${from}\nSubject: ${subject}\n`;
+    if(cc) {
+      message += `Cc: ${cc}\n`;
+    } else {
+      // No Cc in the email
+    }
+
+    if(bcc) {
+      message += `Bcc: ${bcc}\n`
+    } else {
+      // No Bcc in the email
+    }
+
     const agentResponse = await sendMessageToAgent(
-      `New e-mail from ${from}\nSubject: ${subject}\n\n${markdownBody}`,
+      `${message}\n${markdownBody}`,
       context
     );
 
     const response = await sendMarkdownMail(
       agentResponse,
       from,
+      cc,
+      bcc,
       `RE: ${subject}`,
       context.settings
     );

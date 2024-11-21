@@ -36,6 +36,8 @@ async function sendMail(
   htmlContent: string,
   textContent: string,
   to: string,
+  cc: string,
+  bcc: string,
   subject: string,
   transport: unknown,
   settings: Setting[]
@@ -46,6 +48,8 @@ async function sendMail(
     message: {
       from: smtpFrom,
       to,
+      cc,
+      bcc,
       subject,
       text: textContent,
       html: htmlContent,
@@ -70,6 +74,8 @@ async function sendMail(
 export function sendMarkdownMail(
   markdown: string,
   to: string,
+  cc: string,
+  bcc: string,
   subject: string,
   settings: Setting[]
 ) {
@@ -77,5 +83,5 @@ export function sendMarkdownMail(
   const html = converter.makeHtml(markdown);
   const transport = getMailerTransport(settings);
 
-  return sendMail(html, markdown, to, subject, transport, settings);
+  return sendMail(html, markdown, to, cc, bcc, subject, transport, settings);
 }
