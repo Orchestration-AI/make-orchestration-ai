@@ -10,22 +10,20 @@ export const webhookRouter = Router();
 webhookRouter.post("/api/touch", async (_req: Request, res: Response) => {
   const context: Context = res.locals.context;
 
-  const links = [
+  const endpoints = [
     {
-      link_description:
-        "Webhook endpoint. Use this to send events to this agent.",
-      link_name: "Webhook URL",
-      link_url: `${process.env.WEBHOOK_URL}/${context.identity.layerId}`,
+      description: "Webhook endpoint. Use this to send events to this agent.",
+      endpoint: `${process.env.WEBHOOK_URL}/${context.identity.layerId}`,
     },
   ];
 
   try {
     const promises = [
       fetch(
-        `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/links`,
+        `${process.env.ENGINE_URL}/agents/${context.identity.agentId}/endpoints`,
         {
           method: "POST",
-          body: JSON.stringify(links),
+          body: JSON.stringify(endpoints),
           headers: {
             Authorization: `Bearer ${process.env.OAI_ACCESS_KEY}`,
             "Content-Type": "application/json",
