@@ -1,9 +1,9 @@
 name: Deploy
 on:
   push:
-    branches: main
-  pull_request:
-    branches: main
+    branches:
+      - main
+      - qa
 
 jobs:
   deploy:
@@ -31,11 +31,18 @@ jobs:
       - name: Install step
         run: "deno install"
 
-      - name: Upload to Deno Deploy
+      - name: Upload to Deno Deploy QA
+        if: github.ref == 'refs/heads/qa'
         uses: denoland/deployctl@v1
         with:
           project: "make-oai-public"
           entrypoint: "main.ts"
           root: "shared-services"
-          
-          
+
+      - name: Upload to Deno Deploy PROD
+        if: github.ref == 'refs/heads/main'
+        uses: denoland/deployctl@v1
+        with:
+          project: "make-oai-public-prod"
+          entrypoint: "main.ts"
+          root: "shared-services"
