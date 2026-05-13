@@ -16,7 +16,7 @@ The SDK exports a pre-configured `client` with the correct base URL. Just import
 
 ```typescript
 import { client } from '@orchestration-ai/sdk/client.gen';
-import { workspaceFind } from '@orchestration-ai/sdk';
+import { workspaceFind } from '@orchestration-ai/sdk/sdk.gen';
 
 const response = await workspaceFind();
 console.log(response.data);
@@ -30,7 +30,8 @@ For server-to-server authentication, use the **client_credentials** OAuth flow. 
 
 ```typescript
 import { client } from '@orchestration-ai/sdk/client.gen';
-import { setupClientCredentials, workspaceFind } from '@orchestration-ai/sdk';
+import { setupClientCredentials } from '@orchestration-ai/sdk/oauth-utils';
+import { workspaceFind } from '@orchestration-ai/sdk/sdk.gen';
 
 // Setup once — tokens are fetched and refreshed automatically
 setupClientCredentials(client, {
@@ -65,7 +66,7 @@ import {
   getCurrentLogin,
   isLoginExpired,
   logout,
-} from '@orchestration-ai/sdk';
+} from '@orchestration-ai/sdk/oauth-utils';
 
 // Attach stored tokens to all requests automatically
 // Optionally provide a refresh callback for automatic token renewal
@@ -85,7 +86,7 @@ setupBrowserAuth(client, {
 
 ```typescript
 import { client } from '@orchestration-ai/sdk/client.gen';
-import { initiateLogin } from '@orchestration-ai/sdk';
+import { initiateLogin } from '@orchestration-ai/sdk/oauth-utils';
 
 function handleLoginClick() {
   initiateLogin(client.getConfig().baseURL, {
@@ -103,7 +104,7 @@ This redirects the user to the Orchestration AI login page.
 On your callback page (e.g. `/callback`), parse the redirect result and exchange the code via your backend:
 
 ```typescript
-import { parseLoginRedirect, saveLogin } from '@orchestration-ai/sdk';
+import { parseLoginRedirect, saveLogin } from '@orchestration-ai/sdk/oauth-utils';
 
 const result = parseLoginRedirect();
 
@@ -132,7 +133,7 @@ If you provided `onRefreshToken` to `setupBrowserAuth`, token refresh is handled
 If you prefer to handle refresh manually:
 
 ```typescript
-import { isLoginExpired, saveLogin, logout } from '@orchestration-ai/sdk';
+import { isLoginExpired, saveLogin, logout } from '@orchestration-ai/sdk/oauth-utils';
 
 if (isLoginExpired()) {
   const response = await fetch('/api/auth/refresh');
@@ -147,7 +148,7 @@ if (isLoginExpired()) {
 #### Logout
 
 ```typescript
-import { logout } from '@orchestration-ai/sdk';
+import { logout } from '@orchestration-ai/sdk/oauth-utils';
 
 logout(); // Clears stored tokens from localStorage
 ```
@@ -157,7 +158,7 @@ logout(); // Clears stored tokens from localStorage
 ### Workspaces
 
 ```typescript
-import { workspaceFind, workspaceCreate, workspaceFindById } from '@orchestration-ai/sdk';
+import { workspaceFind, workspaceCreate, workspaceFindById } from '@orchestration-ai/sdk/sdk.gen';
 
 // List workspaces
 const { data } = await workspaceFind({ query: { limit: 10, offset: 0 } });
@@ -177,7 +178,7 @@ const { data: ws } = await workspaceFindById({ path: { id: 'workspace-id' } });
 import {
   orchestrationFindByWorkspace,
   orchestrationCreate,
-} from '@orchestration-ai/sdk';
+} from '@orchestration-ai/sdk/sdk.gen';
 
 // List orchestrations in a workspace
 const { data } = await orchestrationFindByWorkspace({
@@ -197,7 +198,7 @@ const { data: orch } = await orchestrationCreate({
 ### Agents
 
 ```typescript
-import { agentFindByOrchestration, agentCreate } from '@orchestration-ai/sdk';
+import { agentFindByOrchestration, agentCreate } from '@orchestration-ai/sdk/sdk.gen';
 
 // List agents
 const { data } = await agentFindByOrchestration({
@@ -217,7 +218,7 @@ const { data: agent } = await agentCreate({
 ### Error Handling
 
 ```typescript
-import { workspaceFind } from '@orchestration-ai/sdk';
+import { workspaceFind } from '@orchestration-ai/sdk/sdk.gen';
 
 const response = await workspaceFind();
 
@@ -231,7 +232,7 @@ if (response.error) {
 ### Using throwOnError
 
 ```typescript
-import { workspaceFind } from '@orchestration-ai/sdk';
+import { workspaceFind } from '@orchestration-ai/sdk/sdk.gen';
 
 try {
   const response = await workspaceFind({ throwOnError: true });
@@ -286,7 +287,7 @@ Each resource has fine-grained permissions:
 ### Example: Granting Access
 
 ```typescript
-import { accessCreate } from '@orchestration-ai/sdk';
+import { accessCreate } from '@orchestration-ai/sdk/sdk.gen';
 
 // Grant a user full admin access to a workspace
 await accessCreate({

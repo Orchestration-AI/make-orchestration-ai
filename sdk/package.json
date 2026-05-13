@@ -1,6 +1,6 @@
 {
   "name": "@orchestration-ai/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TypeScript SDK for Orchestration AI — The Operating System for AI-Powered Businesses",
   "license": "MIT",
   "author": "Orchestration AI",
@@ -20,18 +20,48 @@
     "typescript",
     "api-client"
   ],
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/esm/index.d.ts",
+  "main": "./dist/cjs/sdk.gen.js",
+  "module": "./dist/esm/sdk.gen.js",
+  "types": "./dist/esm/sdk.gen.d.ts",
   "exports": {
-    ".": {
+    "./client.gen": {
       "import": {
-        "types": "./dist/esm/index.d.ts",
-        "default": "./dist/esm/index.js"
+        "types": "./dist/esm/client.gen.d.ts",
+        "default": "./dist/esm/client.gen.js"
       },
       "require": {
-        "types": "./dist/cjs/index.d.ts",
-        "default": "./dist/cjs/index.js"
+        "types": "./dist/cjs/client.gen.d.ts",
+        "default": "./dist/cjs/client.gen.js"
+      }
+    },
+    "./sdk.gen": {
+      "import": {
+        "types": "./dist/esm/sdk.gen.d.ts",
+        "default": "./dist/esm/sdk.gen.js"
+      },
+      "require": {
+        "types": "./dist/cjs/sdk.gen.d.ts",
+        "default": "./dist/cjs/sdk.gen.js"
+      }
+    },
+    "./types.gen": {
+      "import": {
+        "types": "./dist/esm/types.gen.d.ts",
+        "default": "./dist/esm/types.gen.js"
+      },
+      "require": {
+        "types": "./dist/cjs/types.gen.d.ts",
+        "default": "./dist/cjs/types.gen.js"
+      }
+    },
+    "./oauth-utils": {
+      "import": {
+        "types": "./dist/esm/oauth-utils.d.ts",
+        "default": "./dist/esm/oauth-utils.js"
+      },
+      "require": {
+        "types": "./dist/cjs/oauth-utils.d.ts",
+        "default": "./dist/cjs/oauth-utils.js"
       }
     }
   },

@@ -4,7 +4,11 @@ const stripController = (name: string) => name.replace(/Controller/g, '');
 
 export default defineConfig({
   input: 'https://api-dot-orchestration-ai-online-qa.ew.r.appspot.com/openapi.json',
-  output: 'typescript',
+  output: {
+    path: 'typescript',
+    clean: false,
+    entryFile: false,
+  },
   plugins: [
     {
       name: '@hey-api/typescript',
