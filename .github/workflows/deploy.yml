@@ -46,3 +46,36 @@ jobs:
           project: "make-oai-public-prod"
           entrypoint: "main.ts"
           root: "shared-services"
+
+  publish-sdk:
+    name: Publish SDK to npm
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: deploy
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: sdk
+
+      - name: Build SDK
+        run: npm run build
+        working-directory: sdk
+
+      - name: Publish to npm
+        run: npm publish --access public
+        working-directory: sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

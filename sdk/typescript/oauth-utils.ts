@@ -6,7 +6,7 @@ const STORAGE_KEY = 'oai_oauth_tokens';
 
 export interface OAuthTokens {
   access_token: string;
-  refresh_token: string;
+  refresh_token?: string;
   token_type: string;
   expires_in: number;
   scope?: string;
@@ -16,6 +16,11 @@ export interface OAuthTokens {
 export interface OAuthConfig {
   client_id: string;
   client_secret: string;
+  scope?: string;
+}
+
+export interface OAuthBrowserConfig {
+  client_id: string;
   redirect_uri: string;
   scope?: string;
 }
@@ -24,48 +29,48 @@ function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
 }
 
-function saveTokens(tokenResponse: OAuthTokenResponse): OAuthTokens | null {
-  if (!isBrowser() || !tokenResponse?.access_token) return null;
-  const tokens: OAuthTokens = {
+function toTokens(tokenResponse: OAuthTokenResponse): OAuthTokens | null {
+  if (!tokenResponse?.access_token) return null;
+  return {
     access_token: tokenResponse.access_token!,
-    refresh_token: tokenResponse.refresh_token!,
+    refresh_token: tokenResponse.refresh_token,
     token_type: tokenResponse.token_type || 'Bearer',
     expires_in: tokenResponse.expires_in || 3600,
     scope: tokenResponse.scope,
     expires_at: Date.now() + (tokenResponse.expires_in || 3600) * 1000,
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
-  return tokens;
-}
-
-function getStoredTokens(): OAuthTokens | null {
-  if (!isBrowser()) return null;
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function clearTokens(): void {
-  if (isBrowser()) localStorage.removeItem(STORAGE_KEY);
 }
 
 function isTokenExpired(tokens: OAuthTokens): boolean {
-  return Date.now() >= tokens.expires_at - 30_000; // 30s buffer
+  return Date.now() >= tokens.expires_at - 30_000;
+}
+
+// --- Browser: token storage ---
+
+export function saveLogin(tokens: OAuthTokens): void {
+  if (isBrowser()) localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
 }
 
 export function getCurrentLogin(): OAuthTokens | null {
-  return getStoredTokens();
+  if (!isBrowser()) return null;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+export function isLoginExpired(): boolean {
+  const tokens = getCurrentLogin();
+  if (!tokens) return true;
+  return isTokenExpired(tokens);
 }
 
 export function logout(): void {
-  clearTokens();
+  if (isBrowser()) localStorage.removeItem(STORAGE_KEY);
 }
 
-export function initiateLogin(baseUrl: string, config: OAuthConfig, state?: string): void {
+// --- Browser: OAuth redirect flow ---
+
+export function initiateLogin(baseUrl: string, config: OAuthBrowserConfig, state?: string): void {
   if (!isBrowser()) throw new Error('initiateLogin can only be used in the browser');
   const params = new URLSearchParams({
     response_type: 'code',
@@ -98,77 +103,106 @@ export function parseLoginRedirect(): OAuthRedirectResult {
   return { granted: true, code, state: params.get('state') || undefined };
 }
 
-export function setupOAuthInterceptors(sdkClient: Client, config: OAuthConfig): void {
+// --- Browser: attach stored token to requests ---
+
+export interface BrowserAuthOptions {
+  onRefreshToken?: () => Promise<OAuthTokens | null>;
+}
+
+export function setupBrowserAuth(sdkClient: Client, options?: BrowserAuthOptions): void {
   if (!isBrowser()) return;
 
   let refreshPromise: Promise<OAuthTokens | null> | null = null;
 
-  async function refreshAccessToken(): Promise<OAuthTokens | null> {
-    const tokens = getStoredTokens();
-    if (!tokens?.refresh_token) {
-      clearTokens();
-      return null;
-    }
+  async function refresh(): Promise<OAuthTokens | null> {
+    if (!options?.onRefreshToken) return null;
     try {
-      const response = await oAuthToken({
-        client: sdkClient,
-        body: {
-          grant_type: 'refresh_token',
-          refresh_token: tokens.refresh_token,
-          client_id: config.client_id,
-          client_secret: config.client_secret,
-        },
-      });
-      if (response.error) {
-        clearTokens();
-        return null;
-      }
-      return saveTokens(response.data as OAuthTokenResponse);
-    } catch {
-      clearTokens();
-      return null;
-    }
+      const tokens = await options.onRefreshToken();
+      if (tokens) saveLogin(tokens);
+      return tokens;
+    } catch { return null; }
   }
 
-  // Request interceptor: attach access token, refresh if expired
   sdkClient.instance.interceptors.request.use(async (reqConfig) => {
-    let tokens = getStoredTokens();
+    let tokens = getCurrentLogin();
     if (!tokens) return reqConfig;
 
-    if (isTokenExpired(tokens)) {
-      if (!refreshPromise) refreshPromise = refreshAccessToken().finally(() => { refreshPromise = null; });
+    if (isTokenExpired(tokens) && options?.onRefreshToken) {
+      if (!refreshPromise) refreshPromise = refresh().finally(() => { refreshPromise = null; });
       tokens = await refreshPromise;
       if (!tokens) return reqConfig;
     }
 
-    reqConfig.headers = reqConfig.headers || {};
-    reqConfig.headers['Authorization'] = `Bearer ${tokens.access_token}`;
+    if (tokens && !isTokenExpired(tokens)) {
+      reqConfig.headers = reqConfig.headers || {};
+      reqConfig.headers['Authorization'] = `Bearer ${tokens.access_token}`;
+    }
     return reqConfig;
   });
 
-  // Response interceptor: retry once on 401
+  if (options?.onRefreshToken) {
+    sdkClient.instance.interceptors.response.use(undefined, async (error) => {
+      const originalRequest = error.config;
+      if (error.response?.status === 401 && !originalRequest._retried) {
+        originalRequest._retried = true;
+        if (!refreshPromise) refreshPromise = refresh().finally(() => { refreshPromise = null; });
+        const tokens = await refreshPromise;
+        if (tokens) {
+          originalRequest.headers['Authorization'] = `Bearer ${tokens.access_token}`;
+          return sdkClient.instance(originalRequest);
+        }
+      }
+      return Promise.reject(error);
+    });
+  }
+}
+
+// --- Node.js: client_credentials flow ---
+
+export function setupClientCredentials(sdkClient: Client, config: OAuthConfig): void {
+  let tokens: OAuthTokens | null = null;
+  let refreshPromise: Promise<OAuthTokens | null> | null = null;
+
+  async function fetchToken(): Promise<OAuthTokens | null> {
+    try {
+      const response = await oAuthToken({
+        client: sdkClient,
+        body: {
+          grant_type: 'client_credentials',
+          client_id: config.client_id,
+          client_secret: config.client_secret,
+          ...(config.scope && { scope: config.scope }),
+        },
+      });
+      if (response.error) return null;
+      tokens = toTokens(response.data as OAuthTokenResponse);
+      return tokens;
+    } catch { return null; }
+  }
+
+  sdkClient.instance.interceptors.request.use(async (reqConfig) => {
+    if (!tokens || isTokenExpired(tokens)) {
+      if (!refreshPromise) refreshPromise = fetchToken().finally(() => { refreshPromise = null; });
+      tokens = await refreshPromise;
+    }
+    if (tokens) {
+      reqConfig.headers = reqConfig.headers || {};
+      reqConfig.headers['Authorization'] = `Bearer ${tokens.access_token}`;
+    }
+    return reqConfig;
+  });
+
   sdkClient.instance.interceptors.response.use(undefined, async (error) => {
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retried) {
       originalRequest._retried = true;
-      if (!refreshPromise) refreshPromise = refreshAccessToken().finally(() => { refreshPromise = null; });
-      const tokens = await refreshPromise;
+      if (!refreshPromise) refreshPromise = fetchToken().finally(() => { refreshPromise = null; });
+      tokens = await refreshPromise;
       if (tokens) {
         originalRequest.headers['Authorization'] = `Bearer ${tokens.access_token}`;
         return sdkClient.instance(originalRequest);
       }
     }
     return Promise.reject(error);
-  });
-
-  // Intercept token/login/signup responses to auto-save tokens
-  sdkClient.instance.interceptors.response.use((response) => {
-    const url = response.config.url || '';
-    if (url.includes('/oauth/token') || url.includes('/oauth/authorize/login') || url.includes('/oauth/authorize/signup')) {
-      if (response.data?.access_token) {
-        saveTokens(response.data);
-      }
-    }
-    return response;
   });
 }
