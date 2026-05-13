@@ -1,0 +1,56 @@
+{
+  "name": "@orchestration-ai/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Orchestration AI — The Operating System for AI-Powered Businesses",
+  "license": "MIT",
+  "author": "Orchestration AI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Orchestration-AI/make-orchestration-ai.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://orchestration-ai.com",
+  "bugs": {
+    "url": "https://github.com/Orchestration-AI/make-orchestration-ai/issues"
+  },
+  "keywords": [
+    "orchestration-ai",
+    "sdk",
+    "ai",
+    "typescript",
+    "api-client"
+  ],
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc --project tsconfig.json && node scripts/fix-esm-imports.js && echo '{\"type\":\"module\"}' > dist/esm/package.json",
+    "build:cjs": "tsc --project tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
+    "generate": "openapi-ts",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.97.1",
+    "typescript": "^5.5.0"
+  }
+}
