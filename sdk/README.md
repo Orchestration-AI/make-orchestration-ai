@@ -1,6 +1,6 @@
 # @orchestration-ai/sdk
 
-TypeScript SDK for [Orchestration AI](https://orchestration-ai.com) — The Operating System for AI-Powered Businesses.
+TypeScript SDK for [Orchestration AI](https://orchestration-ai.com) - The Operating System for AI-Powered Businesses.
 
 Works in both **Node.js** and the **browser** using the same package.
 
@@ -14,7 +14,7 @@ npm install @orchestration-ai/sdk
 
 The SDK provides everything you need to build Orchestration AI applications that expose services and tools to agents.
 
-### Quick Start — Define an Application
+### Quick Start - Define an Application
 
 ```typescript
 import { createApp, defineService } from '@orchestration-ai/sdk/app-builder';
@@ -60,8 +60,8 @@ Visit `http://localhost:3001/explore` to see your services and test tools intera
 
 An application consists of:
 
-- **Permissions** — Roles the app requires (granted on installation)
-- **Services** — Each service exposes tools that agents can call
+- **Permissions** - Roles the app requires (granted on installation)
+- **Services** - Each service exposes tools that agents can call
 
 ### Service Definition
 
@@ -103,7 +103,7 @@ The app-builder provides two pre-configured clients to every handler:
 
 ### Static vs Dynamic Descriptions
 
-**Static** — TypeScript enforces that `tools` keys match the `path` values in `description`:
+**Static** - TypeScript enforces that `tools` keys match the `path` values in `description`:
 
 ```typescript
 import { defineService } from '@orchestration-ai/sdk/app-builder';
@@ -122,7 +122,7 @@ export const myService = defineService({
 });
 ```
 
-**Dynamic** — When the description depends on context/settings:
+**Dynamic** - When the description depends on context/settings:
 
 ```typescript
 import { defineServiceWithDynamicDescription } from '@orchestration-ai/sdk/app-builder';
