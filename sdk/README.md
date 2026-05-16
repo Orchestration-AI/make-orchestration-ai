@@ -10,307 +10,379 @@ Works in both **Node.js** and the **browser** using the same package.
 npm install @orchestration-ai/sdk
 ```
 
-## Quick Start
+## Building Applications
 
-The SDK exports a pre-configured `client` with the correct base URL. Just import and use:
+The SDK provides everything you need to build Orchestration AI applications that expose services and tools to agents.
+
+### Quick Start — Define an Application
 
 ```typescript
-import { client } from '@orchestration-ai/sdk/client.gen';
-import { workspaceFind } from '@orchestration-ai/sdk/sdk.gen';
+import { createApp, defineService } from '@orchestration-ai/sdk/app-builder';
 
-const response = await workspaceFind();
-console.log(response.data);
+createApp()
+  .permissions([
+    { permission_name: "role_agent_reader", justification: "Read agent context." },
+    { permission_name: "role_agent_writer", justification: "Register endpoints." },
+  ])
+  .service(defineService({
+    unique_name: "my-service",
+    service_name: "My Service",
+    service_description: "Does useful things for agents.",
+    defaultSettings: [
+      { setting_name: "API_KEY", setting_description: "External API key", setting_type: "Secret", text_value: "" },
+    ],
+    description: [
+      {
+        path: "do_thing",
+        method: "POST",
+        description: "Performs an action.",
+        parameters: {
+          input: { type: "string", optional: false, description: "The input value." },
+        },
+      },
+    ],
+    tools: {
+      do_thing: async (body, context, engineClient, apiClient) => {
+        // body is the request payload
+        // context contains the agent identity
+        // engineClient is for engine calls (sendMessages, getContext)
+        // apiClient is for API calls (settingFindByAgent, endpointCreate, etc.)
+        return { result: `Processed: ${body.input}` };
+      },
+    },
+  }))
+  .listen(3001);
+```
+
+Visit `http://localhost:3001/explore` to see your services and test tools interactively.
+
+### Application Structure
+
+An application consists of:
+
+- **Permissions** — Roles the app requires (granted on installation)
+- **Services** — Each service exposes tools that agents can call
+
+### Service Definition
+
+Each service has:
+
+| Field | Description |
+|-------|-------------|
+| `unique_name` | URL-safe identifier |
+| `service_name` | Human-readable name |
+| `service_description` | What the service does |
+| `defaultSettings` | Settings created when the service is installed |
+| `description` | Static array or dynamic function returning tool descriptions |
+| `touch` | Called when the service's context may have changed |
+| `tools` | Handler functions for each tool |
+
+### Handler Signatures
+
+All handlers receive the engine client and API client:
+
+```typescript
+// Tool handler
+(body: any, context: Context, engineClient: Client, apiClient: Client) => unknown | Promise<unknown>
+
+// Touch handler
+(context: Context, engineClient: Client, apiClient: Client) => void | Promise<void>
+
+// Description handler (dynamic)
+(context: Context, engineClient: Client, apiClient: Client) => ServiceDescription | Promise<ServiceDescription>
+```
+
+### Two Clients
+
+The app-builder provides two pre-configured clients to every handler:
+
+| Client | Purpose | Auth |
+|--------|---------|------|
+| `engineClient` | Internal engine calls (`sendMessages`, `getContext`) | Bearer access key |
+| `apiClient` | Public API calls (`settingFindByAgent`, `endpointCreate`, `linkCreate`) | OAuth client_credentials |
+
+### Static vs Dynamic Descriptions
+
+**Static** — TypeScript enforces that `tools` keys match the `path` values in `description`:
+
+```typescript
+import { defineService } from '@orchestration-ai/sdk/app-builder';
+
+export const myService = defineService({
+  unique_name: "calculator",
+  service_name: "Calculator",
+  service_description: "Math operations.",
+  description: [
+    { path: "add", method: "POST", description: "Adds two numbers.", parameters: { a: { type: "number", optional: false, description: "First number" }, b: { type: "number", optional: false, description: "Second number" } } },
+  ],
+  tools: {
+    add: (body) => ({ result: body.a + body.b }),
+    // TypeScript error if you add a tool not in description, or miss one
+  },
+});
+```
+
+**Dynamic** — When the description depends on context/settings:
+
+```typescript
+import { defineServiceWithDynamicDescription } from '@orchestration-ai/sdk/app-builder';
+
+export const myService = defineServiceWithDynamicDescription({
+  unique_name: "conditional",
+  service_name: "Conditional Service",
+  service_description: "Tools depend on settings.",
+  description: async (context, engineClient, apiClient) => {
+    const { data } = await settingFindByAgent({ client: apiClient, path: { ... } });
+    // Return different tools based on settings
+    return [...];
+  },
+  tools: {
+    tool_a: (body, context) => { ... },
+    tool_b: (body, context) => { ... },
+  },
+});
+```
+
+### Touch Handler
+
+Called by the engine when a service's context may have changed. Use it to register endpoints or links:
+
+```typescript
+touch: async (context, engineClient, apiClient) => {
+  await endpointCreate({
+    client: apiClient,
+    path: {
+      workspaceId: context.identity.workspaceId,
+      orchestrationId: context.identity.orchestrationId,
+      agentId: context.identity.agentId,
+    },
+    body: {
+      description: "Webhook for receiving events.",
+      endpoint: `https://my-app.com/webhook/${context.identity.layerId}`,
+    },
+  });
+}
+```
+
+### Settings
+
+Three types of settings:
+
+| Type | Use Case |
+|------|----------|
+| `Text` | General configuration values |
+| `Boolean` | Feature flags, toggles |
+| `Secret` | API keys, passwords (treated securely by the engine) |
+
+Utility functions for reading settings:
+
+```typescript
+import { getBooleanSetting, getTextSetting, getSecretSetting } from '@orchestration-ai/sdk/services';
+
+const enabled = getBooleanSetting(settings, "FEATURE_ENABLED");
+const host = getTextSetting(settings, "SMTP_HOST");
+const apiKey = getSecretSetting(settings, "API_KEY");
+```
+
+### Sending Messages to Agents
+
+Use the engine client to send messages:
+
+```typescript
+import { sendMessages } from '@orchestration-ai/sdk/services';
+
+const response = await sendMessages(
+  agentId,
+  layerIndex,
+  [{ message: "Hello from my service" }],
+  context.identity.layerId,
+  engineClient
+);
+```
+
+### Getting Agent Context
+
+```typescript
+import { getContext } from '@orchestration-ai/sdk/services';
+
+const context = await getContext(layerId, engineClient);
+// context.identity.agentId, .layerId, .orchestrationId, .workspaceId, etc.
+```
+
+### Custom Endpoints
+
+Access the underlying Express app and HTTP server for custom routes or WebSockets:
+
+```typescript
+const app = createApp().service(myService);
+
+// Custom route
+app.expressApp.post("/custom/:id", (req, res) => { ... });
+
+// WebSocket
+import { Server } from "socket.io";
+const io = new Server(app.httpServer, { path: "/ws" });
+io.on("connection", (socket) => { ... });
+
+app.listen(3001);
+```
+
+### Explore Page
+
+The `/explore` endpoint renders an interactive page showing all services, tools, and permissions. You can test tools directly from the browser.
+
+Disable in production:
+
+```typescript
+createApp({ explore: false }).service(...).listen(3001);
+```
+
+## Client Factories
+
+### createEngineClient
+
+For calling engine internal endpoints:
+
+```typescript
+import { createEngineClient } from '@orchestration-ai/sdk/services';
+
+// Production (default URL)
+const client = createEngineClient(accessKey);
+
+// Custom URL
+const client = createEngineClient("https://my-engine.com", accessKey);
+
+// Nullable URL (falls back to production)
+const client = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
+```
+
+### createApplicationClient
+
+For calling another OAI application's services:
+
+```typescript
+import { createApplicationClient, listServices, callServiceTool } from '@orchestration-ai/sdk/services';
+
+const client = createApplicationClient(application, layerId);
+const services = await listServices(client);
+const result = await callServiceTool("service-name", "tool-path", client, { body: { key: "value" } });
+```
+
+### createApiClient
+
+For making authenticated API calls with OAuth:
+
+```typescript
+import { createApiClient } from '@orchestration-ai/sdk/services';
+import { setupClientCredentials } from '@orchestration-ai/sdk/oauth-utils';
+
+const apiClient = createApiClient();
+setupClientCredentials(apiClient, {
+  client_id: accessKey,
+  client_secret: `${accessKey}:${workspaceOwnerId}`,
+});
+
+// Now use with sdk.gen functions
+await settingFindByAgent({ client: apiClient, path: { ... } });
 ```
 
 ## Authentication
 
 ### Node.js (Server-Side)
 
-For server-to-server authentication, use the **client_credentials** OAuth flow. The SDK manages token acquisition and refresh automatically:
+For server-to-server authentication, use the **client_credentials** OAuth flow:
 
 ```typescript
 import { client } from '@orchestration-ai/sdk/client.gen';
 import { setupClientCredentials } from '@orchestration-ai/sdk/oauth-utils';
-import { workspaceFind } from '@orchestration-ai/sdk/sdk.gen';
 
-// Setup once — tokens are fetched and refreshed automatically
 setupClientCredentials(client, {
   client_id: 'your-client-id',
   client_secret: 'your-client-secret',
-  scope: 'role_admin', // any supported role as scope
+  scope: 'role_admin',
 });
-
-// All requests are now authenticated
-const workspaces = await workspaceFind();
 ```
 
-The SDK will:
-- Automatically obtain an access token via `client_credentials` on the first request
-- Re-fetch the token when it expires (with a 30s buffer)
-- Retry once on 401 responses with a fresh token
-- Deduplicate concurrent token requests
-
-The `scope` parameter accepts any supported role (e.g. `role_admin`, `role_workspace_writer`, `role_agent_reader`). See [Roles & Permissions](#roles--permissions) for the full list.
+The SDK automatically obtains and refreshes tokens.
 
 ### Browser (Client-Side)
 
-Browser apps should never expose a `client_secret`. The SDK provides utilities to manage the OAuth redirect flow and token storage. Token acquisition and refresh should be handled by your backend.
-
 ```typescript
 import { client } from '@orchestration-ai/sdk/client.gen';
-import {
-  setupBrowserAuth,
-  initiateLogin,
-  parseLoginRedirect,
-  saveLogin,
-  getCurrentLogin,
-  isLoginExpired,
-  logout,
-} from '@orchestration-ai/sdk/oauth-utils';
+import { setupBrowserAuth, initiateLogin, parseLoginRedirect, saveLogin, logout } from '@orchestration-ai/sdk/oauth-utils';
 
-// Attach stored tokens to all requests automatically
-// Optionally provide a refresh callback for automatic token renewal
 setupBrowserAuth(client, {
   onRefreshToken: async () => {
-    // Call your backend to refresh the token
     const response = await fetch('/api/auth/refresh');
-    if (!response.ok) return null;
-    return response.json(); // must return OAuthTokens shape
+    return response.ok ? response.json() : null;
   },
 });
-```
 
-#### OAuth Login Flow
+// Initiate login
+initiateLogin(client.getConfig().baseURL, {
+  client_id: 'your-client-id',
+  redirect_uri: 'https://your-app.com/callback',
+});
 
-**Step 1: Initiate login (redirects the browser)**
-
-```typescript
-import { client } from '@orchestration-ai/sdk/client.gen';
-import { initiateLogin } from '@orchestration-ai/sdk/oauth-utils';
-
-function handleLoginClick() {
-  initiateLogin(client.getConfig().baseURL, {
-    client_id: 'your-client-id',
-    redirect_uri: 'https://your-app.com/callback',
-    scope: 'role_admin', // any supported role as scope
-  }, 'optional-state-value');
-}
-```
-
-This redirects the user to the Orchestration AI login page.
-
-**Step 2: Handle the redirect callback**
-
-On your callback page (e.g. `/callback`), parse the redirect result and exchange the code via your backend:
-
-```typescript
-import { parseLoginRedirect, saveLogin } from '@orchestration-ai/sdk/oauth-utils';
-
+// Handle callback
 const result = parseLoginRedirect();
-
 if (result.granted) {
-  // Send the code to your backend to exchange for tokens securely
-  // IMPORTANT: pass the same redirect_uri used in initiateLogin
   const tokens = await fetch('/api/auth/exchange', {
     method: 'POST',
-    body: JSON.stringify({
-      code: result.code,
-      redirect_uri: 'https://your-app.com/callback',
-    }),
+    body: JSON.stringify({ code: result.code, redirect_uri: '...' }),
   }).then(r => r.json());
-
-  // Save the tokens — setupBrowserAuth will attach them to future requests
   saveLogin(tokens);
-} else {
-  console.error('Login denied:', result.error, result.error_description);
 }
-```
-
-#### Token Refresh
-
-If you provided `onRefreshToken` to `setupBrowserAuth`, token refresh is handled automatically — both proactively when the token is about to expire and reactively on 401 responses.
-
-If you prefer to handle refresh manually:
-
-```typescript
-import { isLoginExpired, saveLogin, logout } from '@orchestration-ai/sdk/oauth-utils';
-
-if (isLoginExpired()) {
-  const response = await fetch('/api/auth/refresh');
-  if (response.ok) {
-    saveLogin(await response.json());
-  } else {
-    logout();
-  }
-}
-```
-
-#### Logout
-
-```typescript
-import { logout } from '@orchestration-ai/sdk/oauth-utils';
-
-logout(); // Clears stored tokens from localStorage
 ```
 
 ## API Usage Examples
 
-### Workspaces
-
 ```typescript
-import { workspaceFind, workspaceCreate, workspaceFindById } from '@orchestration-ai/sdk/sdk.gen';
+import { workspaceFind, orchestrationCreate, agentCreate } from '@orchestration-ai/sdk/sdk.gen';
 
 // List workspaces
-const { data } = await workspaceFind({ query: { limit: 10, offset: 0 } });
-
-// Create a workspace
-const { data: workspace } = await workspaceCreate({
-  body: { workspace_name: 'My Workspace' },
-});
-
-// Get a workspace by ID
-const { data: ws } = await workspaceFindById({ path: { id: 'workspace-id' } });
-```
-
-### Orchestrations
-
-```typescript
-import {
-  orchestrationFindByWorkspace,
-  orchestrationCreate,
-} from '@orchestration-ai/sdk/sdk.gen';
-
-// List orchestrations in a workspace
-const { data } = await orchestrationFindByWorkspace({
-  path: { workspaceId: 'workspace-id' },
-});
+const { data } = await workspaceFind();
 
 // Create an orchestration
 const { data: orch } = await orchestrationCreate({
-  path: { workspaceId: 'workspace-id' },
-  body: {
-    orchestration_name: 'My Orchestration',
-    orchestration_description: 'Handles customer support',
-  },
-});
-```
-
-### Agents
-
-```typescript
-import { agentFindByOrchestration, agentCreate } from '@orchestration-ai/sdk/sdk.gen';
-
-// List agents
-const { data } = await agentFindByOrchestration({
-  path: { workspaceId: 'ws-id', orchestrationId: 'orch-id' },
+  path: { workspaceId: 'ws-id' },
+  body: { orchestration_name: 'My Orchestration', orchestration_description: '...' },
 });
 
 // Create an agent
 const { data: agent } = await agentCreate({
   path: { workspaceId: 'ws-id', orchestrationId: 'orch-id' },
-  body: {
-    agent_name: 'Support Agent',
-    agent_description: 'Handles tier 1 support tickets',
-  },
+  body: { agent_name: 'Support Agent', agent_description: '...' },
 });
-```
-
-### Error Handling
-
-```typescript
-import { workspaceFind } from '@orchestration-ai/sdk/sdk.gen';
-
-const response = await workspaceFind();
-
-if (response.error) {
-  console.error('Request failed:', response.error);
-} else {
-  console.log('Workspaces:', response.data);
-}
-```
-
-### Using throwOnError
-
-```typescript
-import { workspaceFind } from '@orchestration-ai/sdk/sdk.gen';
-
-try {
-  const response = await workspaceFind({ throwOnError: true });
-  console.log('Workspaces:', response.data);
-} catch (error) {
-  console.error('Request failed:', error);
-}
 ```
 
 ## Roles & Permissions
 
-Access control uses a hierarchical role system. Higher-level roles inherit all permissions from their children.
+Applications declare permissions using Casbin role names:
 
-### Top-Level Roles
+| Role | Description |
+|------|-------------|
+| `role_admin` | Full access to everything |
+| `role_workspace_admin` | Full workspace + orchestration + agent access |
+| `role_agent_reader` | Read agent data |
+| `role_agent_writer` | Read + create + update agents |
+| `role_agent_admin` | Full agent CRUD |
+| `role_service_reader` | Read services |
+
+See the full hierarchy in the [Roles & Permissions](#roles-hierarchy) section below.
+
+### Roles Hierarchy
 
 | Role | Inherits |
 |------|----------|
-| `role_admin` | `role_workspace_admin`, `role_application_admin`, `role_access_admin`, `role_llm_keys_admin`, `role_llm_reader`, `role_llm_lister`, `role_service_reader`, `role_service_lister`, `role_day_pass_transaction_lister` |
-
-### Admin Roles
-
-| Role | Inherits |
-|------|----------|
+| `role_admin` | All admin roles + `role_llm_reader`, `role_llm_lister`, `role_service_reader`, `role_service_lister`, `role_day_pass_transaction_lister` |
 | `role_workspace_admin` | `role_workspace_writer`, `role_workspace_lister`, `role_workspace_deleter`, `role_orchestration_admin` |
 | `role_orchestration_admin` | `role_orchestration_writer`, `role_orchestration_lister`, `role_orchestration_deleter`, `role_agent_admin` |
 | `role_agent_admin` | `role_agent_writer`, `role_agent_lister`, `role_agent_deleter` |
 | `role_application_admin` | `role_application_writer`, `role_application_lister`, `role_application_deleter` |
 | `role_access_admin` | `role_access_writer`, `role_access_lister`, `role_access_deleter` |
-| `role_llm_keys_admin` | `role_llm_keys_writer`, `role_llm_keys_lister` |
 
-### Writer Roles
-
-| Role | Inherits |
-|------|----------|
-| `role_workspace_writer` | `role_workspace_inserter`, `role_workspace_reader`, `role_workspace_updater` |
-| `role_orchestration_writer` | `role_orchestration_inserter`, `role_orchestration_reader`, `role_orchestration_updater` |
-| `role_agent_writer` | `role_agent_inserter`, `role_agent_reader`, `role_agent_updater` |
-| `role_application_writer` | `role_application_inserter`, `role_application_reader`, `role_application_updater` |
-| `role_access_writer` | `role_access_inserter`, `role_access_reader` |
-| `role_llm_keys_writer` | `role_llm_keys_inserter`, `role_llm_keys_reader`, `role_llm_keys_updater` |
-
-### Granular Permissions
-
-Each resource has fine-grained permissions:
-
-- `*_reader` — Read a single resource by ID
-- `*_lister` — List/query resources
-- `*_inserter` — Create new resources
-- `*_updater` — Update existing resources
-- `*_deleter` — Delete resources
-
-### Example: Granting Access
-
-```typescript
-import { accessCreate } from '@orchestration-ai/sdk/sdk.gen';
-
-// Grant a user full admin access to a workspace
-await accessCreate({
-  body: {
-    resource_id: 'workspace-id',
-    principal_id: 'user-uid',
-    principal_name: 'Jane Doe',
-    principal_email: 'jane@example.com',
-    role: 'role_admin',
-  },
-});
-
-// Grant read-only access to orchestrations
-await accessCreate({
-  body: {
-    resource_id: 'workspace-id',
-    principal_id: 'user-uid',
-    principal_name: 'Viewer',
-    principal_email: 'viewer@example.com',
-    role: 'role_orchestration_reader',
-  },
-});
-```
+Writer roles inherit inserter + reader + updater. Each resource has `_reader`, `_lister`, `_inserter`, `_updater`, `_deleter` granular permissions.
 
 ## License
 
