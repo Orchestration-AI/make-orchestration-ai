@@ -1,7 +1,7 @@
 // @deno-types=npm:@types/showdown@2.0.6
 import showdown from "showdown";
-import { Setting } from "../types.ts";
-import { getBooleanSetting, getTextSetting } from "../utils.ts";
+import type { Setting } from "@orchestration-ai/sdk/services";
+import { getBooleanSetting, getTextSetting } from "@orchestration-ai/sdk/services";
 import {
   smtpHostSettingKey,
   smtpPortSettingKey,

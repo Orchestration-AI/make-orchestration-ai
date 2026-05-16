@@ -1,4 +1,4 @@
-import { ServiceDescription } from "../types.ts";
+import type { ServiceDescription } from "@orchestration-ai/sdk/services";
 
 export const mathJsServiceFunctions: ServiceDescription = [
   {

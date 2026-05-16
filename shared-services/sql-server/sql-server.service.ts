@@ -1,19 +1,19 @@
 // @deno-types="npm:@types/mssql@9.1.5"
 import sql from "mssql";
-import type { Context } from "../types.ts";
-import { getBooleanSetting, getTextSetting } from "../utils.ts";
+import type { Setting } from "@orchestration-ai/sdk/services";
+import { getBooleanSetting, getTextSetting } from "@orchestration-ai/sdk/services";
 import {
   sqlServerConnectionStringKey,
   sqlServerRemoveBackslashOnDatesKey,
 } from "./sql-server.constants.ts";
 
-export async function runQuery(query: string, context: Context) {
+export async function runQuery(query: string, settings: Setting[]) {
   const connString = getTextSetting(
-    context.settings,
+    settings,
     sqlServerConnectionStringKey
   )!;
   const removeBackslashes = getBooleanSetting(
-    context.settings,
+    settings,
     sqlServerRemoveBackslashOnDatesKey
   );
 

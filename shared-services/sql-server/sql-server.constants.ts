@@ -1,4 +1,4 @@
-import type { Setting } from "../types.ts";
+import type { Setting } from "@orchestration-ai/sdk/services";
 
 export const sqlServerConnectionStringKey = "SQL_SERVER_CONNECTION_STRING";
 export const sqlServerRemoveBackslashOnDatesKey =

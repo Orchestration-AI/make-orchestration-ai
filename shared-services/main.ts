@@ -1,79 +1,138 @@
+import { createApp } from "@orchestration-ai/sdk/app-builder";
+import type { Setting } from "@orchestration-ai/sdk/services";
+import { createEngineClient, createApiClient } from "@orchestration-ai/sdk/services";
+import { settingFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
+import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
+import process from "node:process";
+import { Server } from "socket.io";
+import { addSocket } from "./voice/voice.service.ts";
+import { messagingService } from "./messages/messaging.service.definition.ts";
+import { voiceService } from "./voice/voice.service.definition.ts";
+import { sqlServerService } from "./sql-server/sql-server.service.definition.ts";
+import { mailService } from "./mail/mail.service.definition.ts";
+import { webhookService } from "./webhook/webhook.service.definition.ts";
+import { mathjsService } from "./mathjs/mathjs.service.definition.ts";
+import { sendMarkdownMail } from "./mail/mail.service.ts";
+import { sendMessageToAgent } from "./voice/voice.service.ts";
+import { getContext } from "./context.middleware.ts";
+import { getRequiredEnvValue } from "./environment.ts";
 // @deno-types="npm:@types/express@5.0.0"
 import express from "express";
-import process from "node:process";
-import { contextMiddleware } from "./context.middleware.ts";
-import { messagingRouter } from "./messages/messaging.router.ts";
-import { voiceRouter } from "./voice/voice.router.ts";
-import { Server } from "socket.io";
-import { createServer } from "node:http";
-import { addSocket } from "./voice/voice.service.ts";
-import { sqlServerRouter } from "./sql-server/sql-server.router.ts";
-import { mailRouter } from "./mail/mail.router.ts";
-import { webhookRouter } from "./webhook/webhook.router.ts";
-import { mathjsRouter } from "./mathjs/mathjs.router.ts";
 
 const PORT = process.env.PORT || 3001;
 
 function main() {
-  const app = express();
-  const server = createServer(app);
+  const app = createApp()
+    .permissions([
+      {
+        permission_name: "role_agent_reader",
+        justification: "Read agent context and send messages to agents within the orchestration.",
+      },
+      {
+        permission_name: "role_agent_writer",
+        justification: "Register and update agent endpoints and links.",
+      },
+    ])
+    .service(messagingService)
+    .service(voiceService)
+    .service(sqlServerService)
+    .service(mailService)
+    .service(webhookService)
+    .service(mathjsService);
 
-  app.use(contextMiddleware);
-  app.use(express.json());
+  // Custom: mail zapier webhook (receives emails from Zapier)
+  app.expressApp.post(
+    "/services/mail/api/zapier/:layerId",
+    async (req, res) => {
+      try {
+        const context = await getContext(req.params.layerId);
+        const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
+        const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
+        const apiClient = createApiClient();
+        setupClientCredentials(apiClient, {
+          client_id: accessKey,
+          client_secret: `${accessKey}:${context.identity.workspaceOwnerId}`,
+        });
 
-  app.get("/services", (_req, res) => {
-    res.status(200).json([
-      {
-        unique_name: "messaging",
-        service_name: "OAI Messaging",
-        service_description: "Inter agent communication.",
-      },
-      {
-        unique_name: "voice",
-        service_name: "OAI Voice",
-        service_description: "Voice communication with the user.",
-      },
-      {
-        unique_name: "sql-server",
-        service_name: "OAI Sql Server",
-        service_description: "Run queries on a SQL Server database.",
-      },
-      {
-        unique_name: "mail",
-        service_name: "OAI Mail",
-        service_description: "Send emails email via SMTP.",
-      },
-      {
-        unique_name: "webhook",
-        service_name: "OAI Webhook",
-        service_description: "Allows agents to receive JSON webhook events.",
-      },
-      {
-        unique_name: "mathjs",
-        service_name: "OAI MathJs",
-        service_description:
-          "Allows agents to evaluate mathjs expression with mathjs.",
-      },
-    ]);
-  });
+        const { body: markdownBody, from, cc, bcc, subject } = req.body;
 
-  app.use("/services/messaging", messagingRouter);
-  app.use("/services/voice", voiceRouter);
-  app.use("/services/sql-server", sqlServerRouter);
-  app.use("/services/mail", mailRouter);
-  app.use("/services/webhook", webhookRouter);
-  app.use("/services/mathjs", mathjsRouter);
+        let message = `New e-mail from ${from}\nSubject: ${subject}\n`;
+        if (cc) message += `Cc: ${cc}\n`;
+        if (bcc) message += `Bcc: ${bcc}\n`;
 
-  app.use("/services/voice/chat", express.static("./voice/public"));
+        const agentResponse = await sendMessageToAgent(
+          `${message}\n${markdownBody}`,
+          context,
+          engineClient
+        );
 
-  const voiceIo = new Server(server, {
+        const { data } = await settingFindByAgent({
+          client: apiClient,
+          path: {
+            workspaceId: context.identity.workspaceId,
+            orchestrationId: context.identity.orchestrationId,
+            agentId: context.identity.agentId,
+          },
+        });
+
+        const response = await sendMarkdownMail(
+          agentResponse,
+          from,
+          cc,
+          bcc,
+          `RE: ${subject}`,
+          data!.settings! as Setting[]
+        );
+
+        res.status(200).send(response);
+      } catch (e) {
+        console.warn(e);
+        res.status(500).send(`${e}`);
+      }
+    }
+  );
+
+  // Custom: webhook event endpoint
+  app.expressApp.post(
+    "/services/webhook/api/event/:layerId",
+    async (req, res) => {
+      try {
+        const context = await getContext(req.params.layerId);
+        const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
+        const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
+
+        const body = JSON.stringify(req.body);
+        const headersText = Object.entries(req.headers)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join("\n");
+
+        const agentResponse = await sendMessageToAgent(
+          `New Webhook event\n\nHeaders:${headersText}\n\nJSON Body:\n${body}\n`,
+          context,
+          engineClient
+        );
+
+        res.send(agentResponse);
+      } catch (e) {
+        console.warn(e);
+        res.status(500).send(`${e}`);
+      }
+    }
+  );
+
+  // Custom: serve voice chat static files
+  app.expressApp.use(
+    "/services/voice/chat",
+    express.static("./voice/public")
+  );
+
+  // Custom: voice websocket
+  const voiceIo = new Server(app.httpServer, {
     path: "/hooks/voice-io",
   });
   voiceIo.on("connection", addSocket);
 
-  server.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-  });
+  app.listen(PORT);
 }
 
 if (import.meta.main) {

@@ -1,26 +1,15 @@
 import { getContext } from "../context.middleware.ts";
+import { sendMessages, createEngineClient } from "@orchestration-ai/sdk/services";
+import type { Context } from "@orchestration-ai/sdk/services";
+import type { Client } from "@orchestration-ai/sdk/app-builder";
 import { getRequiredEnvValue } from "../environment.ts";
-import type { Context } from "../types.ts";
+import process from "node:process";
 import type { Socket } from "socket.io";
 
 let sockets: Socket[] = [];
 
-export async function sendMessageToAgent(message: string, context: Context) {
-  const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
-  const inferenceEndpointPrefix = getRequiredEnvValue("ENGINE_URL");
-  const endpoint = `${inferenceEndpointPrefix}/agents/${context.identity.agentId}/layers/0/messages`;
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    body: JSON.stringify([{ message }]),
-    headers: {
-      Authorization: `Bearer ${accessKey}`,
-      "X-LayerId": context.identity.layerId,
-      "Content-Type": "application/json",
-    },
-  });
-
-  return response.text();
+export async function sendMessageToAgent(message: string, context: Context, engineClient: Client) {
+  return sendMessages(context.identity.agentId, 0, [{ message }], context.identity.layerId, engineClient);
 }
 
 export function addSocket(socket: Socket) {
@@ -28,7 +17,11 @@ export function addSocket(socket: Socket) {
 
   socket.on("message", async (msg) => {
     const context = await getContext(msg.layerId);
-    const response = await sendMessageToAgent(msg.message, context);
+    const engineClient = createEngineClient(
+      process.env.ENGINE_URL ?? null,
+      getRequiredEnvValue("OAI_ACCESS_KEY")
+    );
+    const response = await sendMessageToAgent(msg.message, context, engineClient);
 
     for (const socket of sockets) {
       socket.emit("message", { message: response });

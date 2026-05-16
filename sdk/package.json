@@ -73,6 +73,26 @@
         "types": "./dist/cjs/services.d.ts",
         "default": "./dist/cjs/services.js"
       }
+    },
+    "./shared-types": {
+      "import": {
+        "types": "./dist/esm/shared-types.d.ts",
+        "default": "./dist/esm/shared-types.js"
+      },
+      "require": {
+        "types": "./dist/cjs/shared-types.d.ts",
+        "default": "./dist/cjs/shared-types.js"
+      }
+    },
+    "./app-builder": {
+      "import": {
+        "types": "./dist/esm/app-builder.d.ts",
+        "default": "./dist/esm/app-builder.js"
+      },
+      "require": {
+        "types": "./dist/cjs/app-builder.d.ts",
+        "default": "./dist/cjs/app-builder.js"
+      }
     }
   },
   "files": [
@@ -87,10 +107,13 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "axios": "^1.7.0"
+    "axios": "^1.7.0",
+    "express": "^5.0.0"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.97.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.8.0",
     "typescript": "^5.5.0"
   }
 }

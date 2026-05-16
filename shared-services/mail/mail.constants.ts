@@ -1,4 +1,4 @@
-import { Setting } from "../types.ts";
+import type { Setting } from "@orchestration-ai/sdk/services";
 
 export const smtpHostSettingKey = "SMTP_HOST";
 export const smtpPortSettingKey = "SMTP_PORT";
@@ -51,5 +51,5 @@ export const defaultSettings: Setting[] = [
       "When true, the agent will be able to autonomously send emails. When false, the agent can only reply to emails.",
     setting_type: "Boolean",
     boolean_value: false,
-  },  
+  },
 ];

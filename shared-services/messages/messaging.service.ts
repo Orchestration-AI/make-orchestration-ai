@@ -1,5 +1,7 @@
-import type { Context, Setting } from "../types.ts";
-import { getRequiredEnvValue } from "../environment.ts";
+import type { Context, Setting } from "@orchestration-ai/sdk/services";
+import type { Client } from "@orchestration-ai/sdk/app-builder";
+import { sendMessages } from "@orchestration-ai/sdk/services";
+import { settingFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
 import { asyncMessagingSettingKey } from "./messaging.constants.ts";
 
 function asyncMessagingEnabled(settings: Setting[]): boolean {
@@ -14,86 +16,42 @@ function asyncMessagingEnabled(settings: Setting[]): boolean {
   }
 }
 
-export function messageLayerBelow(message: string, context: Context) {
+export function messageLayerBelow(message: string, context: Context, engineClient: Client) {
   console.log("Messaging layer below");
   const layerBelowIndex = context.identity.layerIndex + 1;
-  return messageLayerByIndex(
-    message,
-    context.identity.layerId,
-    context.identity.agentId,
-    layerBelowIndex,
-    false
-  );
+  return sendMessages(context.identity.agentId, layerBelowIndex, [{ message }], context.identity.layerId, engineClient);
 }
 
-export function messageLayerAbove(message: string, context: Context) {
+export function messageLayerAbove(message: string, context: Context, engineClient: Client) {
   console.log("Messaging layer above");
   const layerAboveIndex = context.identity.layerIndex - 1;
-  return messageLayerByIndex(
-    message,
-    context.identity.layerId,
-    context.identity.agentId,
-    layerAboveIndex,
-    false
-  );
+  return sendMessages(context.identity.agentId, layerAboveIndex, [{ message }], context.identity.layerId, engineClient);
 }
 
-export function messageOtherAgent(
+export async function messageOtherAgent(
   message: string,
   otherAgentId: string,
-  context: Context
+  context: Context,
+  engineClient: Client,
+  apiClient: Client
 ) {
   console.log("Messaging other agent");
-  return messageLayerByIndex(
-    message,
-    context.identity.layerId,
-    otherAgentId,
-    0,
-    asyncMessagingEnabled(context.settings)
-  );
-}
-
-async function messageLayerByIndex(
-  message: string,
-  sendingLayerId: string,
-  recepientAgentId: string,
-  recepientLayerIndex: number,
-  sendAsync: boolean
-) {
-  const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
-  const inferenceEndpointPrefix = getRequiredEnvValue("ENGINE_URL");
-  const endpoint = `${inferenceEndpointPrefix}/agents/${recepientAgentId}/layers/${recepientLayerIndex}/messages`;
-
-  console.log({
-    message,
-    sendingLayerId,
-    recepientAgentId,
-    recepientLayerIndex,
-    sendAsync,
-  });
-
-  const responsePromise = fetch(endpoint, {
-    method: "POST",
-    body: JSON.stringify([{ message }]),
-    headers: {
-      Authorization: `Bearer ${accessKey}`,
-      "X-LayerId": sendingLayerId,
-      "Content-Type": "application/json",
+  const { data } = await settingFindByAgent({
+    client: apiClient,
+    path: {
+      workspaceId: context.identity.workspaceId,
+      orchestrationId: context.identity.orchestrationId,
+      agentId: context.identity.agentId,
     },
   });
+  const isAsync = asyncMessagingEnabled(data!.settings! as Setting[]);
 
-  if (sendAsync) {
-    responsePromise
-      .then((response) => {
-        console.info(`Async response received. Status ${response.status}.`);
-        return response.text();
-      })
-      .then(console.info);
-
+  if (isAsync) {
+    sendMessages(otherAgentId, 0, [{ message }], context.identity.layerId, engineClient).then((response) => {
+      console.info(`Async response received: ${response}`);
+    });
     return "MESSAGE_RECEIVED";
   } else {
-    const response = await responsePromise;
-    console.log(response);
-    return response.text();
+    return sendMessages(otherAgentId, 0, [{ message }], context.identity.layerId, engineClient);
   }
 }

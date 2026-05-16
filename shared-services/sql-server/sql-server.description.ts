@@ -1,4 +1,4 @@
-import type { ServiceDescription } from "../types.ts";
+import type { ServiceDescription } from "@orchestration-ai/sdk/services";
 
 export const sqlServerServiceFunctions: ServiceDescription = [
   {
