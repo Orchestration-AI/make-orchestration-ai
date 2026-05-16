@@ -1,6 +1,6 @@
 {
   "name": "@orchestration-ai/sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "TypeScript SDK for Orchestration AI — The Operating System for AI-Powered Businesses",
   "license": "MIT",
   "author": "Orchestration AI",
@@ -62,6 +62,16 @@
       "require": {
         "types": "./dist/cjs/oauth-utils.d.ts",
         "default": "./dist/cjs/oauth-utils.js"
+      }
+    },
+    "./services": {
+      "import": {
+        "types": "./dist/esm/services.d.ts",
+        "default": "./dist/esm/services.js"
+      },
+      "require": {
+        "types": "./dist/cjs/services.d.ts",
+        "default": "./dist/cjs/services.js"
       }
     }
   },
