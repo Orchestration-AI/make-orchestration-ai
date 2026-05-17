@@ -9,7 +9,7 @@ export const defaultSettings: Setting[] = [
     setting_name: sqlServerConnectionStringKey,
     setting_description:
       "The connection string to use to connect to a SQL database.",
-    setting_type: "Text",
+    setting_type: "Secret",
     text_value: "",
   },
   {

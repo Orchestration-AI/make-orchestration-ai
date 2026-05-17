@@ -30,7 +30,7 @@ export const defaultSettings: Setting[] = [
   {
     setting_name: smtpPasswordSettingKey,
     setting_description: "The SMTP_PASSWORD to use for sending emails.",
-    setting_type: "Text",
+    setting_type: "Secret",
     text_value: "",
   },
   {
