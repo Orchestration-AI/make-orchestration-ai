@@ -47,8 +47,8 @@ export function createEngineClient(engineUrl: string | null, accessKey: string):
 export function createEngineClient(accessKey: string): Client;
 export function createEngineClient(engineUrlOrAccessKey: string | null, accessKey?: string): Client {
   const url = accessKey
-    ? (engineUrlOrAccessKey ?? "https://orchestration-ai-online-prod.ey.r.appspot.com")
-    : "https://orchestration-ai-online-prod.ey.r.appspot.com";
+    ? (engineUrlOrAccessKey ?? "https://engine.orchestration-ai.com")
+    : "https://engine.orchestration-ai.com";
   const key = accessKey ?? (engineUrlOrAccessKey as string);
   return createClient(createConfig({
     baseURL: url,
