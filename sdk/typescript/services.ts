@@ -162,5 +162,9 @@ export async function sendMessages(
     responseType: 'text',
     security: [{ scheme: 'bearer', type: 'http' }],
   });
-  return response.data as string;
+  if(response.data) {
+    return response.data as string;
+  } else {
+    return response.error as string || "Unknown error";
+  }
 }

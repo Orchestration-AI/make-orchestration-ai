@@ -7,7 +7,7 @@ import type {
   ServiceDescription,
   Setting,
 } from "./shared-types";
-import { createEngineClient, createApiClient } from "./services";
+import { createEngineClient, createApiClient, getContext } from "./services";
 import { setupClientCredentials } from "./oauth-utils";
 
 // --- Types ---
@@ -75,20 +75,6 @@ export type { Client } from "./client";
 export type { Context, Permission, ServiceDescription, Setting } from "./shared-types";
 export { getBooleanSetting, getTextSetting, getSecretSetting } from "./shared-types";
 
-// --- Context Resolution ---
-
-async function resolveContext(
-  layerId: string,
-  engineUrl: string,
-  accessKey: string
-): Promise<Context> {
-  const endpoint = `${engineUrl}/agents/context/${layerId}`;
-  return (
-    await fetch(endpoint, {
-      headers: { Authorization: `Bearer ${accessKey}` },
-    })
-  ).json();
-}
 
 // --- Explore Page ---
 
@@ -506,19 +492,19 @@ export function createApp(config?: AppConfig): OaiApp {
   const services: ServiceDefinition<any>[] = [];
   let appPermissions: Permission[] = config?.permissions ?? [];
 
-  const engineUrl = config?.engineUrl ?? process.env.ENGINE_URL ?? "";
+  const engineUrl = config?.engineUrl ?? process.env.ENGINE_URL ?? null;
   const accessKey = config?.accessKey ?? process.env.OAI_ACCESS_KEY ?? "";
+
+  const engineClient = createEngineClient(engineUrl, accessKey);
 
   // Context middleware
   app.use(async (req: Request, res: Response, next) => {
     const layerId = req.get("X-LayerId");
+
     if (layerId) {
-      const context = await resolveContext(layerId, engineUrl, accessKey);
+      const context = await getContext(layerId, engineClient);
       res.locals.context = context;
-      res.locals.engineClient = createEngineClient(
-        process.env.ENGINE_URL ?? null,
-        accessKey
-      );
+      res.locals.engineClient = engineClient;
       const apiClient = createApiClient();
       setupClientCredentials(apiClient, {
         client_id: accessKey,

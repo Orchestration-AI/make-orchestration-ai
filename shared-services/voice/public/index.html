@@ -1,22 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Voice Service</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voice Agent</title>
     <link rel="stylesheet" href="styles.css" />
-
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="socketio.4.7.5.min.js"></script>
     <script src="main.js" defer></script>
   </head>
   <body>
-    <header>
-      <h2>Speak to your Agent</h2>
-    </header>
-    <main>
-      <button id="start-button">Listen</button>
-      <button id="stop-button">Stop Listening</button>
-      <p id="msg">Status</p>
-      <section id="messages"></section>
-      <textarea placeholder="Enter prompt" id="prompt"></textarea>
-    </main>
+    <div class="chat-container">
+      <header>
+        <h1>Voice Agent</h1>
+        <div class="controls">
+          <select id="voice-select" title="TTS Voice"></select>
+          <label class="toggle" title="Read responses aloud">
+            <input type="checkbox" id="tts-toggle" />
+            <span class="toggle-label">🔊</span>
+          </label>
+        </div>
+      </header>
+
+      <section id="messages" class="messages"></section>
+
+      <footer>
+        <div class="input-row">
+          <button id="mic-button" class="icon-btn" title="Voice input">🎙️</button>
+          <textarea id="prompt" placeholder="Type a message..." rows="1"></textarea>
+          <button id="send-button" class="icon-btn" title="Send">➤</button>
+        </div>
+        <p id="msg" class="status"></p>
+      </footer>
+    </div>
   </body>
 </html>
