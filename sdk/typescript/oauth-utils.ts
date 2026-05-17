@@ -1,4 +1,4 @@
-import type { Client } from './client';
+import { type Client, createClient, createConfig } from './client';
 import type { OAuthTokenResponse } from './types.gen';
 import { oAuthToken } from './sdk.gen';
 
@@ -163,10 +163,13 @@ export function setupClientCredentials(sdkClient: Client, config: OAuthConfig): 
   let tokens: OAuthTokens | null = null;
   let refreshPromise: Promise<OAuthTokens | null> | null = null;
 
+  // Use a bare client (no interceptors) for token requests to avoid deadlock
+  const tokenClient = createClient(createConfig({ baseURL: sdkClient.getConfig().baseURL }));
+
   async function fetchToken(): Promise<OAuthTokens | null> {
     try {
       const response = await oAuthToken({
-        client: sdkClient,
+        client: tokenClient,
         body: {
           grant_type: 'client_credentials',
           client_id: config.client_id,
