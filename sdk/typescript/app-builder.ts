@@ -57,6 +57,7 @@ export type AppConfig = {
   port?: number | string;
   permissions?: Permission[];
   engineUrl?: string;
+  clientId?: string;
   accessKey?: string;
   /** Set to false to disable the /explore page. Defaults to true. */
   explore?: boolean;
@@ -493,6 +494,7 @@ export function createApp(config?: AppConfig): OaiApp {
   let appPermissions: Permission[] = config?.permissions ?? [];
 
   const engineUrl = config?.engineUrl ?? process.env.ENGINE_URL ?? null;
+  const clientId = config?.clientId ?? process.env.OAI_CLIENT_ID ?? "";
   const accessKey = config?.accessKey ?? process.env.OAI_ACCESS_KEY ?? "";
 
   const engineClient = createEngineClient(engineUrl, accessKey);
@@ -507,8 +509,8 @@ export function createApp(config?: AppConfig): OaiApp {
       res.locals.engineClient = engineClient;
       const apiClient = createApiClient();
       setupClientCredentials(apiClient, {
-        client_id: accessKey,
-        client_secret: `${accessKey}:${context.identity.workspaceOwnerId}`,
+        client_id: `${clientId}:${context.identity.workspaceOwnerId}`,
+        client_secret: accessKey,
       });
       res.locals.apiClient = apiClient;
     }
