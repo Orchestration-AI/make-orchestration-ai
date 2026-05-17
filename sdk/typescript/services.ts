@@ -47,8 +47,8 @@ export function createEngineClient(engineUrl: string | null, accessKey: string):
 export function createEngineClient(accessKey: string): Client;
 export function createEngineClient(engineUrlOrAccessKey: string | null, accessKey?: string): Client {
   const url = accessKey
-    ? (engineUrlOrAccessKey ?? "https://orchestration-ai-online-prod.ey.r.appspot.com")
-    : "https://orchestration-ai-online-prod.ey.r.appspot.com";
+    ? (engineUrlOrAccessKey ?? "https://engine.orchestration-ai.com")
+    : "https://engine.orchestration-ai.com";
   const key = accessKey ?? (engineUrlOrAccessKey as string);
   return createClient(createConfig({
     baseURL: url,
@@ -162,5 +162,9 @@ export async function sendMessages(
     responseType: 'text',
     security: [{ scheme: 'bearer', type: 'http' }],
   });
-  return response.data as string;
+  if(response.data) {
+    return response.data as string;
+  } else {
+    return response.error as string || "Unknown error";
+  }
 }

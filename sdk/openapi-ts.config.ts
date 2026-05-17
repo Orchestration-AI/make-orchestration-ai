@@ -3,7 +3,7 @@ import { defineConfig } from '@hey-api/openapi-ts';
 const stripController = (name: string) => name.replace(/Controller/g, '');
 
 export default defineConfig({
-  input: 'https://api-dot-orchestration-ai-online-qa.ew.r.appspot.com/openapi.json',
+  input: 'https://api.orchestration-ai.com/openapi.json',
   output: {
     path: 'typescript',
     clean: false,

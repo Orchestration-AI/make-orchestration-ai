@@ -8,7 +8,7 @@ import type { Socket } from "socket.io";
 
 let sockets: Socket[] = [];
 
-export async function sendMessageToAgent(message: string, context: Context, engineClient: Client) {
+export function sendMessageToAgent(message: string, context: Context, engineClient: Client) {
   return sendMessages(context.identity.agentId, 0, [{ message }], context.identity.layerId, engineClient);
 }
 
@@ -23,9 +23,7 @@ export function addSocket(socket: Socket) {
     );
     const response = await sendMessageToAgent(msg.message, context, engineClient);
 
-    for (const socket of sockets) {
-      socket.emit("message", { message: response });
-    }
+    socket.emit("message", { message: response });
   });
 
   socket.on(
