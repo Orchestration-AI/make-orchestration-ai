@@ -22,7 +22,7 @@ export const mailService = defineServiceWithDynamicDescription({
       },
       body: {
         description:
-          "Zapier email webhook. It is through this webhook the agent receives emails.",
+          "Zapier email webhook. It is through this webhook the agent receives emails. Webhooks expose your agent to the public internet, so only use them for testing.",
         endpoint: `${process.env.MAIL_SERVICE_API_URL}/zapier/${context.identity.layerId}`,
       },
     });

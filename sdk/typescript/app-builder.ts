@@ -9,6 +9,7 @@ import type {
 } from "./shared-types";
 import { createEngineClient, createApiClient, getContext } from "./services";
 import { setupClientCredentials } from "./oauth-utils";
+import { authDecryptPasskey } from "./sdk.gen";
 
 // --- Types ---
 
@@ -501,13 +502,19 @@ export function createApp(config?: AppConfig): OaiApp {
 
   // Context middleware
   app.use(async (req: Request, res: Response, next) => {
-    const layerId = req.get("X-LayerId");
+    const passkey = req.get("X-Passkey");
 
-    if (layerId) {
+    if (passkey) {
+      const apiClient = createApiClient();
+
+      const { data: decrypted } = await authDecryptPasskey({
+        body: { passkey },
+        client: apiClient,
+      });
+      const layerId = decrypted?.data as string;
       const context = await getContext(layerId, engineClient);
       res.locals.context = context;
       res.locals.engineClient = engineClient;
-      const apiClient = createApiClient();
       setupClientCredentials(apiClient, {
         client_id: `${clientId}:${context.identity.workspaceOwnerId}`,
         client_secret: accessKey,

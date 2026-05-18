@@ -92,14 +92,21 @@ socket.on("message", (data) => {
 });
 
 // --- Send ---
+// --- Remove passkey from URL after load ---
+const _urlParams = new URLSearchParams(window.location.search);
+const _passkey = _urlParams.get("passkey");
+if (_passkey) {
+  const _cleanUrl = new URL(window.location.href);
+  _cleanUrl.searchParams.delete("passkey");
+  window.history.replaceState({}, document.title, _cleanUrl.pathname + _cleanUrl.search);
+}
+
 async function sendMessageToAgent(message) {
   if (!message.trim()) return;
   addMessage(message, "user");
   showTyping();
   setStatus("Processing...");
-  const url = new URL(window.location.href);
-  const layerId = url.searchParams.get("layerId");
-  socket.emit("message", { message, layerId });
+  socket.emit("message", { message, passkey: _passkey });
 }
 
 sendButton.addEventListener("click", () => {
