@@ -1,5 +1,5 @@
 import { getContext } from "../context.middleware.ts";
-import { sendMessages, createEngineClient } from "@orchestration-ai/sdk/services";
+import { sendMessages, createEngineClient, createApiClient } from "@orchestration-ai/sdk/services";
 import type { Context } from "@orchestration-ai/sdk/services";
 import type { Client } from "@orchestration-ai/sdk/app-builder";
 import { authDecryptPasskey } from "@orchestration-ai/sdk/sdk.gen";
@@ -15,17 +15,20 @@ export function addSocket(socket: Socket) {
   let cachedLayerId: string | null = null;
 
   socket.on("message", async (msg) => {
+    const apiClient = createApiClient();
     const engineClient = createEngineClient(
       process.env.ENGINE_URL ?? null,
       getRequiredEnvValue("OAI_ACCESS_KEY")
     );
+
     if (!cachedLayerId) {
       const { data: decrypted } = await authDecryptPasskey({
         body: { passkey: msg.passkey },
-        client: engineClient,
+        client: apiClient,
       });
       cachedLayerId = decrypted?.data as string;
     }
+    
     const context = await getContext(cachedLayerId);
     const response = await sendMessageToAgent(msg.message, context, engineClient);
 

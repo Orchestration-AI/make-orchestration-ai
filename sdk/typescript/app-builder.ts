@@ -114,7 +114,7 @@ function renderExplorePage(services: ServiceDefinition<any>[], permissions: Perm
           <p class="tool-desc">${tool.description}</p>
           ${params ? `<div class="params">${params}</div>` : ""}
           <form class="tool-form" style="display:none" onsubmit="callTool(event, '${s.unique_name}', '${tool.path}', '${tool.method}')">
-            <input class="param-input layer-id-input" type="text" name="__layerId__" placeholder="X-LayerId (optional)" />
+            <input class="param-input layer-id-input" type="text" name="__passkey__" placeholder="X-Passkey (optional)" />
             ${paramInputs}
             <div class="form-actions">
               <button type="submit" class="call-btn">Call</button>
@@ -132,7 +132,7 @@ function renderExplorePage(services: ServiceDefinition<any>[], permissions: Perm
             <button class="try-btn" onclick="toggleForm(this)">Try</button>
           </div>
           <form class="tool-form" style="display:none" onsubmit="callTool(event, '${s.unique_name}', '${t}', 'POST')">
-            <input class="param-input layer-id-input" type="text" name="__layerId__" placeholder="X-LayerId (optional)" />
+            <input class="param-input layer-id-input" type="text" name="__passkey__" placeholder="X-Passkey (optional)" />
             <textarea class="raw-body" name="__raw__" placeholder='{ "key": "value" }' rows="3"></textarea>
             <div class="form-actions">
               <button type="submit" class="call-btn">Call</button>
@@ -447,14 +447,14 @@ function renderExplorePage(services: ServiceDefinition<any>[], permissions: Perm
       const form = e.target;
       const responseEl = form.querySelector('.tool-response');
       const rawField = form.querySelector('[name="__raw__"]');
-      const layerIdField = form.querySelector('[name="__layerId__"]');
-      const layerId = layerIdField ? layerIdField.value.trim() : '';
+      const passkeyField = form.querySelector('[name="__passkey__"]');
+      const passkey = passkeyField ? passkeyField.value.trim() : '';
       let body = {};
       if (rawField) {
         try { body = JSON.parse(rawField.value || '{}'); } catch { body = {}; }
       } else {
         for (const input of form.querySelectorAll('[name]')) {
-          if (input.name === '__layerId__') continue;
+          if (input.name === '__passkey__') continue;
           const name = input.name;
           const type = input.dataset.type;
           if (type === 'boolean') { body[name] = input.checked; }
@@ -469,7 +469,7 @@ function renderExplorePage(services: ServiceDefinition<any>[], permissions: Perm
         const url = '/services/' + service + '/api/' + path;
         const headers = {};
         if (isBodyMethod) { headers['Content-Type'] = 'application/json'; }
-        if (layerId) { headers['X-LayerId'] = layerId; }
+        if (passkey) { headers['X-Passkey'] = passkey; }
         const opts = { method: method.toUpperCase(), headers };
         if (isBodyMethod) { opts.body = JSON.stringify(body); }
         const res = await fetch(url, opts);
