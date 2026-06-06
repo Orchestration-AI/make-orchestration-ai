@@ -200,6 +200,61 @@ const response = await sendMessages(
 );
 ```
 
+### Streaming Chat
+
+For realtime, streaming conversations with agents, use `openStreamingChat`. It opens a WebSocket connection and streams the agent's response chunk by chunk. Works in both Node.js and the browser - no extra dependencies required.
+
+```typescript
+import { openStreamingChat } from '@orchestration-ai/sdk/streaming';
+
+const chat = openStreamingChat('agent-id', 0, {
+  onChunk: (chunk) => process.stdout.write(chunk),
+  onResponse: (fullText) => console.log('\n[Done]'),
+  onCancelled: () => console.log('[Cancelled]'),
+  onError: (err) => console.error('[Error]', err),
+  onOpen: () => console.log('[Connected]'),
+  onClose: () => console.log('[Disconnected]'),
+}, {
+  accessKey: 'your-access-key', // optional — falls back to OAI_ACCESS_KEY env
+  engineUrl: 'https://engine.orchestration-ai.com', // optional — falls back to ENGINE_URL env
+});
+
+// Send a message (agent streams its reply via onChunk)
+chat.send('What are my sales numbers this month?');
+
+// Cancel the current stream mid-response
+chat.cancel();
+
+// Close the connection (clears conversation memory)
+chat.close();
+```
+
+**Browser example:**
+
+```typescript
+import { openStreamingChat } from '@orchestration-ai/sdk/streaming';
+
+const output = document.getElementById('output');
+
+const chat = openStreamingChat(agentId, 0, {
+  onChunk: (chunk) => { output.textContent += chunk; },
+  onResponse: () => { /* response complete */ },
+  onError: (err) => { output.textContent = `Error: ${err}`; },
+}, { accessKey: 'your-access-key' });
+
+document.getElementById('send-btn').onclick = () => {
+  output.textContent = '';
+  chat.send(document.getElementById('input').value);
+};
+```
+
+**Key details:**
+
+- The connection maintains conversation memory — each message builds on prior context within the session.
+- Sending a new message while a response is streaming implicitly cancels the previous stream.
+- Calling `chat.close()` ends the session. Open a new connection for a fresh conversation.
+- Unknown server channels are silently ignored for forward compatibility.
+
 ### Getting Agent Context
 
 ```typescript

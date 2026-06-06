@@ -24,6 +24,14 @@ export type {
   Setting,
 } from './shared-types';
 export { getBooleanSetting, getTextSetting, getSecretSetting } from './shared-types';
+export { openStreamingChat } from './streaming';
+export type {
+  StreamingChat,
+  StreamingChatConfig,
+  StreamingChatEvents,
+  StreamingChannel,
+  ServerMessage,
+} from './streaming';
 
 // --- Client Factories ---
 
