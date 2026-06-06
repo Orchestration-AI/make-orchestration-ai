@@ -12,6 +12,8 @@ import { sqlServerService } from "./sql-server/sql-server.service.definition.ts"
 import { mailService } from "./mail/mail.service.definition.ts";
 import { webhookService } from "./webhook/webhook.service.definition.ts";
 import { mathjsService } from "./mathjs/mathjs.service.definition.ts";
+import { telnyxVoiceService } from "./telnyx-voice/telnyx-voice.service.definition.ts";
+import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
 import { sendMarkdownMail } from "./mail/mail.service.ts";
 import { sendMessageToAgent } from "./voice/voice.service.ts";
 import { getContext } from "./context.middleware.ts";
@@ -38,7 +40,8 @@ function main() {
     .service(sqlServerService)
     .service(mailService)
     .service(webhookService)
-    .service(mathjsService);
+    .service(mathjsService)
+    .service(telnyxVoiceService);
 
   // Custom: mail zapier webhook (receives emails from Zapier)
   app.expressApp.post(
@@ -118,6 +121,12 @@ function main() {
         res.status(500).send(`${e}`);
       }
     }
+  );
+
+  // Custom: telnyx voice webhook
+  app.expressApp.post(
+    "/services/telnyx-voice/api/webhook/:layerId",
+    handleTelnyxWebhook
   );
 
   // Custom: serve voice chat static files
