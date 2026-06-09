@@ -152,11 +152,12 @@ function main() {
         if (!layerId) { res.status(401).send("Invalid passkey"); return; }
 
         const context = await getContext(layerId);
+        const clientId = getRequiredEnvValue("OAI_CLIENT_ID");
         const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
 
         setupClientCredentials(apiClient, {
-          client_id: accessKey,
-          client_secret: `${accessKey}:${context.identity.workspaceOwnerId}`,
+          client_id: `${clientId}:${context.identity.workspaceOwnerId}`,
+          client_secret: accessKey,
         });
         const { data: settingsData } = await settingFindByAgent({
           client: apiClient,
@@ -170,8 +171,9 @@ function main() {
         const layerIndex = parseInt(getTextSetting(settings, "AGENT_LAYER") ?? "0", 10);
 
         // Generate a short-lived passkey for the browser to use as accessKey
+        const { data: inferencePasskey } = await authGeneratePasskey({ client: apiClient });
+        
         const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
-        const { data: inferencePasskey } = await authGeneratePasskey({ client: engineClient });
         const engineUrl = engineClient.getConfig().baseURL as string;
 
         res.json({
