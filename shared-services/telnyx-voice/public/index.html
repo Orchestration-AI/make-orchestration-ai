@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Voice Call</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #fff;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+      width: 100%;
+      max-width: 400px;
+      padding: 2rem;
+    }
+    .status {
+      font-size: 1rem;
+      color: #aaa;
+      text-align: center;
+      min-height: 1.5rem;
+    }
+    .call-btn {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.3s;
+      position: relative;
+    }
+    .call-btn:active { transform: scale(0.92); }
+    .call-btn.start {
+      background: #22c55e;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+    }
+    .call-btn.start:hover { box-shadow: 0 0 30px rgba(34, 197, 94, 0.4); }
+    .call-btn.end {
+      background: #ef4444;
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+    }
+    .call-btn.end:hover { box-shadow: 0 0 30px rgba(239, 68, 68, 0.4); }
+    .call-btn.pulsing {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+      70% { box-shadow: 0 0 0 25px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+    .call-btn.active {
+      animation: activePulse 2s infinite;
+    }
+    @keyframes activePulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.6); }
+    }
+    .controls {
+      display: flex;
+      gap: 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .controls.visible { opacity: 1; pointer-events: auto; }
+    .ctrl-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: #222;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .ctrl-btn:hover { background: #333; }
+    .ctrl-btn.active { background: #ef4444; }
+    .settings-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1a1a1a;
+      border-radius: 1rem 1rem 0 0;
+      padding: 1.5rem;
+      transform: translateY(100%);
+      transition: transform 0.3s;
+      z-index: 10;
+    }
+    .settings-panel.open { transform: translateY(0); }
+    .settings-panel h3 { margin-bottom: 1rem; font-size: 1rem; }
+    .settings-panel select {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid #333;
+      background: #0f0f0f;
+      color: #fff;
+      font-size: 1rem;
+    }
+    .settings-panel .close-settings {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9;
+      display: none;
+    }
+    .overlay.visible { display: block; }
+    .transcript {
+      font-size: 0.85rem;
+      color: #666;
+      text-align: center;
+      max-width: 300px;
+      min-height: 1.2rem;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="status" id="status">Tap to start a call</div>
+    <button class="call-btn start pulsing" id="callBtn">📞</button>
+    <div class="controls" id="controls">
+      <button class="ctrl-btn" id="muteBtn" title="Mute">🎙️</button>
+      <button class="ctrl-btn" id="settingsBtn" title="Settings">⚙️</button>
+    </div>
+    <div class="transcript" id="transcript"></div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <div class="settings-panel" id="settingsPanel">
+    <button class="close-settings" id="closeSettings">✕</button>
+    <h3>TTS Voice</h3>
+    <select id="voiceSelect"></select>
+  </div>
+
+  <script>
+    const callBtn = document.getElementById('callBtn');
+    const controls = document.getElementById('controls');
+    const muteBtn = document.getElementById('muteBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const statusEl = document.getElementById('status');
+    const transcriptEl = document.getElementById('transcript');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const overlay = document.getElementById('overlay');
+    const closeSettings = document.getElementById('closeSettings');
+    const voiceSelect = document.getElementById('voiceSelect');
+
+    // State
+    let inCall = false;
+    let muted = false;
+    let chat = null;
+    let recognition = null;
+    let speaking = false;
+
+    // --- Voices ---
+    function populateVoices() {
+      const voices = speechSynthesis.getVoices();
+      voiceSelect.innerHTML = '';
+      voices.forEach((v, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `${v.name} (${v.lang})`;
+        if (v.default) opt.selected = true;
+        voiceSelect.appendChild(opt);
+      });
+    }
+    speechSynthesis.onvoiceschanged = populateVoices;
+    populateVoices();
+
+    // --- Settings ---
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.classList.add('open');
+      overlay.classList.add('visible');
+    });
+    function closeSettingsPanel() {
+      settingsPanel.classList.remove('open');
+      overlay.classList.remove('visible');
+    }
+    closeSettings.addEventListener('click', closeSettingsPanel);
+    overlay.addEventListener('click', closeSettingsPanel);
+
+    // --- TTS ---
+    function speakText(text) {
+      if (!text.trim()) return;
+      speaking = true;
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = speechSynthesis.getVoices();
+      const selected = voices[voiceSelect.value];
+      if (selected) utterance.voice = selected;
+      utterance.onend = () => { speaking = false; };
+      utterance.onerror = () => { speaking = false; };
+      speechSynthesis.speak(utterance);
+    }
+
+    function stopSpeaking() {
+      if (speaking) {
+        speechSynthesis.cancel();
+        speaking = false;
+      }
+    }
+
+    // --- Speech Recognition ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    function startListening() {
+      if (!SpeechRecognition || muted) return;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += t;
+          } else {
+            interimTranscript += t;
+          }
+        }
+
+        if (interimTranscript) {
+          // User started speaking — interrupt agent
+          stopSpeaking();
+          transcriptEl.textContent = interimTranscript;
+        }
+
+        if (finalTranscript.trim()) {
+          transcriptEl.textContent = '';
+          if (chat) chat.send(finalTranscript.trim());
+        }
+      };
+
+      recognition.onerror = (e) => {
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+          console.warn('Speech recognition error:', e.error);
+        }
+      };
+
+      recognition.onend = () => {
+        // Restart if still in call and not muted
+        if (inCall && !muted) {
+          try { recognition.start(); } catch { /* already started */ }
+        }
+      };
+
+      recognition.start();
+    }
+
+    function stopListening() {
+      if (recognition) {
+        recognition.onend = null;
+        recognition.abort();
+        recognition = null;
+      }
+    }
+
+    // --- Streaming Chat ---
+    async function connectChat() {
+      const params = new URLSearchParams(window.location.search);
+      const passkey = params.get('passkey');
+      if (!passkey) {
+        statusEl.textContent = 'Missing passkey in URL';
+        return null;
+      }
+
+      // Get agent info from passkey via backend
+      const res = await fetch(`./api/init?passkey=${encodeURIComponent(passkey)}`);
+      if (!res.ok) {
+        statusEl.textContent = 'Failed to connect';
+        return null;
+      }
+      const { agentId, layerIndex, accessKey, engineUrl } = await res.json();
+
+      let buffer = '';
+
+      const chatInstance = openStreamingChat(agentId, layerIndex, {
+        onChunk: (chunk) => {
+          buffer += chunk;
+          if (/[.!?\n]/.test(chunk)) {
+            speakText(buffer.trim());
+            buffer = '';
+          }
+        },
+        onResponse: () => {
+          if (buffer.trim()) {
+            speakText(buffer.trim());
+            buffer = '';
+          }
+        },
+        onError: (err) => {
+          console.warn('Chat error:', err);
+          statusEl.textContent = 'Connection error';
+        },
+        onOpen: () => {
+          statusEl.textContent = 'Connected';
+        },
+        onClose: () => {
+          if (inCall) endCall();
+        },
+      }, { accessKey, engineUrl });
+
+      return chatInstance;
+    }
+
+    // --- Call lifecycle ---
+    async function startCall() {
+      inCall = true;
+      callBtn.className = 'call-btn end active';
+      callBtn.textContent = '📵';
+      controls.classList.add('visible');
+      statusEl.textContent = 'Connecting...';
+      transcriptEl.textContent = '';
+
+      chat = await connectChat();
+      if (!chat) {
+        endCall();
+        return;
+      }
+
+      statusEl.textContent = 'In call';
+      startListening();
+    }
+
+    function endCall() {
+      inCall = false;
+      stopListening();
+      stopSpeaking();
+      if (chat) { chat.close(); chat = null; }
+      callBtn.className = 'call-btn start pulsing';
+      callBtn.textContent = '📞';
+      controls.classList.remove('visible');
+      statusEl.textContent = 'Call ended';
+      transcriptEl.textContent = '';
+      setTimeout(() => { statusEl.textContent = 'Tap to start a call'; }, 2000);
+    }
+
+    callBtn.addEventListener('click', () => {
+      if (inCall) endCall();
+      else startCall();
+    });
+
+    // --- Mute ---
+    muteBtn.addEventListener('click', () => {
+      muted = !muted;
+      muteBtn.classList.toggle('active', muted);
+      muteBtn.textContent = muted ? '🔇' : '🎙️';
+      if (muted) stopListening();
+      else if (inCall) startListening();
+    });
+
+    // --- openStreamingChat from SDK (loaded via ES module) ---
+    // We inline a minimal version that works in the browser using WebSocket
+    function openStreamingChat(agentId, layerIndex, events, config) {
+      const base = (config?.engineUrl).replace(/^http/, 'ws');
+      const token = config?.accessKey || '';
+      const url = `${base}/agents/${agentId}/layers/${layerIndex}/ws?token=${encodeURIComponent(token)}`;
+
+      const ws = new WebSocket(url);
+      let fullText = '';
+
+      ws.onopen = () => { if (events.onOpen) events.onOpen(); };
+      ws.onmessage = (e) => {
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+        switch (msg.channel) {
+          case 'response':
+            fullText += msg.data;
+            if (events.onChunk) events.onChunk(msg.data);
+            break;
+          case 'response_end':
+            if (events.onResponse) events.onResponse(fullText);
+            fullText = '';
+            break;
+          case 'response_cancelled':
+            fullText = '';
+            if (events.onCancelled) events.onCancelled();
+            break;
+          case 'error':
+            fullText = '';
+            if (events.onError) events.onError(msg.data);
+            break;
+        }
+      };
+      ws.onclose = () => { if (events.onClose) events.onClose(); };
+      ws.onerror = () => { if (events.onError) events.onError('WebSocket error'); };
+
+      return {
+        send(message) { fullText = ''; ws.send(JSON.stringify({ message })); },
+        cancel() { ws.send(JSON.stringify({ type: 'cancel' })); },
+        close() { ws.close(); },
+      };
+    }
+
+    // Clean passkey from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('passkey')) {
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete('passkey');
+      window.history.replaceState({}, '', clean.pathname + clean.search);
+    }
+  </script>
+</body>
+</html>

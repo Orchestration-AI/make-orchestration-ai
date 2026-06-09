@@ -1,6 +1,6 @@
 import { defineService } from "@orchestration-ai/sdk/app-builder";
 import type { Context, Client } from "@orchestration-ai/sdk/app-builder";
-import { endpointCreate } from "@orchestration-ai/sdk/sdk.gen";
+import { endpointCreate, linkCreate } from "@orchestration-ai/sdk/sdk.gen";
 import process from "node:process";
 
 export const telnyxVoiceService = defineService({
@@ -46,8 +46,22 @@ export const telnyxVoiceService = defineService({
       },
       body: {
         description:
-          "Telnyx v2 webhook endpoint. Paste this URL into your Telnyx Call Control App webhook settings.",
+          "Telnyx webhook endpoint. Paste this URL into your Telnyx Call Control App webhook settings.",
         endpoint: `${process.env.SELF_PUBLIC_URL}/services/telnyx-voice/api/webhook/${context.identity.layerId}`,
+      },
+    });
+
+    await linkCreate({
+      client: apiClient,
+      path: {
+        workspaceId: context.identity.workspaceId,
+        orchestrationId: context.identity.orchestrationId,
+        agentId: context.identity.agentId,
+      },
+      body: {
+        link_description: "Voice call page for speaking directly to this agent.",
+        link_name: "Voice Call",
+        link_url: `${process.env.SELF_PUBLIC_URL}/services/telnyx-voice/call`,
       },
     });
   },
