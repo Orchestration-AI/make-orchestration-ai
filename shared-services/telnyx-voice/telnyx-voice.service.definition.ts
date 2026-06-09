@@ -47,7 +47,7 @@ export const telnyxVoiceService = defineService({
       body: {
         description:
           "Telnyx v2 webhook endpoint. Paste this URL into your Telnyx Call Control App webhook settings.",
-        endpoint: `${process.env.TELNYX_VOICE_WEBHOOK_URL}/${context.identity.layerId}`,
+        endpoint: `${process.env.SELF_PUBLIC_URL}/services/telnyx-voice/api/webhook/${context.identity.layerId}`,
       },
     });
   },
