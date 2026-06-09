@@ -290,6 +290,18 @@
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
+      let pendingFinal = '';
+      let sendTimer = null;
+      const SEND_DELAY = 800; // wait for user to finish speaking
+
+      function flushToAgent() {
+        sendTimer = null;
+        const text = pendingFinal.trim();
+        pendingFinal = '';
+        transcriptEl.textContent = '';
+        if (text && chat) chat.send(text);
+      }
+
       recognition.onresult = (event) => {
         let finalTranscript = '';
         let interimTranscript = '';
@@ -301,13 +313,16 @@
           }
         }
 
-        if (interimTranscript) {
-          transcriptEl.textContent = interimTranscript;
-        }
-
-        if (finalTranscript.trim()) {
-          transcriptEl.textContent = '';
-          if (chat) chat.send(finalTranscript.trim());
+        if (finalTranscript) {
+          pendingFinal += ' ' + finalTranscript;
+          transcriptEl.textContent = pendingFinal.trim();
+          // Reset timer — wait for more speech
+          if (sendTimer) clearTimeout(sendTimer);
+          sendTimer = setTimeout(flushToAgent, SEND_DELAY);
+        } else if (interimTranscript) {
+          // User is still talking — show it and reset timer
+          transcriptEl.textContent = (pendingFinal + ' ' + interimTranscript).trim();
+          if (sendTimer) { clearTimeout(sendTimer); sendTimer = null; }
         }
       };
 
