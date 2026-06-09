@@ -386,7 +386,9 @@
           statusEl.textContent = 'Connection error';
         },
         onOpen: () => {
+          stopRinging();
           statusEl.textContent = 'In call';
+          chatInstance.send('Hello');
         },
         onClose: () => {
           if (inCall) endCall();
@@ -396,18 +398,66 @@
       return chatInstance;
     }
 
+    // --- Ringtone (generated via Web Audio API) ---
+    let ringOscillator = null;
+    let ringGain = null;
+    let ringCtx = null;
+    let ringInterval = null;
+
+    function startRinging() {
+      ringCtx = new (window.AudioContext || window.webkitAudioContext)();
+      ringGain = ringCtx.createGain();
+      ringGain.connect(ringCtx.destination);
+      ringGain.gain.value = 0;
+
+      ringOscillator = ringCtx.createOscillator();
+      ringOscillator.type = 'sine';
+      ringOscillator.frequency.value = 440;
+      ringOscillator.connect(ringGain);
+      ringOscillator.start();
+
+      // Ring pattern: 400ms on, 200ms off, 400ms on, 1500ms off
+      let step = 0;
+      const pattern = [
+        { freq: 440, gain: 0.2, duration: 400 },
+        { freq: 0,   gain: 0,   duration: 200 },
+        { freq: 480, gain: 0.2, duration: 400 },
+        { freq: 0,   gain: 0,   duration: 1500 },
+      ];
+
+      function nextStep() {
+        const p = pattern[step % pattern.length];
+        ringOscillator.frequency.value = p.freq || 440;
+        ringGain.gain.value = p.gain;
+        step++;
+        ringInterval = setTimeout(nextStep, p.duration);
+      }
+      nextStep();
+    }
+
+    function stopRinging() {
+      if (ringInterval) { clearTimeout(ringInterval); ringInterval = null; }
+      if (ringOscillator) { ringOscillator.stop(); ringOscillator = null; }
+      if (ringCtx) { ringCtx.close(); ringCtx = null; }
+      ringGain = null;
+    }
+
     // --- Call lifecycle ---
     async function startCall() {
       inCall = true;
       callBtn.className = 'call-btn listening';
       callBtn.textContent = '🎙️';
       controls.classList.add('visible');
-      statusEl.textContent = 'Connecting...';
+      statusEl.textContent = 'Ringing...';
       transcriptEl.textContent = '';
       hintEl.textContent = '';
 
+      startRinging();
+
       chat = await connectChat();
+
       if (!chat) {
+        stopRinging();
         endCall();
         return;
       }
