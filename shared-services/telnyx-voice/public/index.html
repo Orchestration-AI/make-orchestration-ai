@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Voice Call</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #fff;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+      width: 100%;
+      max-width: 400px;
+      padding: 2rem;
+    }
+    .status {
+      font-size: 1rem;
+      color: #aaa;
+      text-align: center;
+      min-height: 1.5rem;
+    }
+    .call-btn {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.3s;
+    }
+    .call-btn:active { transform: scale(0.92); }
+    .call-btn.start {
+      background: #22c55e;
+      animation: pulse 1.5s infinite;
+    }
+    .call-btn.end { background: #ef4444; }
+    .call-btn.listening { background: #22c55e; animation: activePulse 2s infinite; }
+    .call-btn.agent-speaking { background: #3b82f6; animation: speakPulse 1s infinite; }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+      70% { box-shadow: 0 0 0 25px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+    @keyframes activePulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.6); }
+    }
+    @keyframes speakPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
+    }
+    .controls {
+      display: flex;
+      gap: 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .controls.visible { opacity: 1; pointer-events: auto; }
+    .ctrl-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: #222;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .ctrl-btn:hover { background: #333; }
+    .ctrl-btn.active { background: #ef4444; }
+    .hint {
+      font-size: 0.8rem;
+      color: #555;
+      text-align: center;
+      min-height: 1rem;
+    }
+    .settings-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1a1a1a;
+      border-radius: 1rem 1rem 0 0;
+      padding: 1.5rem;
+      transform: translateY(100%);
+      transition: transform 0.3s;
+      z-index: 10;
+    }
+    .settings-panel.open { transform: translateY(0); }
+    .settings-panel h3 { margin-bottom: 1rem; font-size: 1rem; }
+    .settings-panel select {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid #333;
+      background: #0f0f0f;
+      color: #fff;
+      font-size: 1rem;
+    }
+    .settings-panel .close-settings {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9;
+      display: none;
+    }
+    .overlay.visible { display: block; }
+    .transcript {
+      font-size: 0.9rem;
+      color: #888;
+      text-align: center;
+      max-width: 320px;
+      min-height: 1.5rem;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="status" id="status">Tap to start a call</div>
+    <button class="call-btn start" id="callBtn">📞</button>
+    <div class="controls" id="controls">
+      <button class="ctrl-btn" id="muteBtn" title="Mute">🎙️</button>
+      <button class="ctrl-btn" id="endBtn" title="End call">📵</button>
+      <button class="ctrl-btn" id="settingsBtn" title="Settings">⚙️</button>
+    </div>
+    <div class="transcript" id="transcript"></div>
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <div class="settings-panel" id="settingsPanel">
+    <button class="close-settings" id="closeSettings">✕</button>
+    <h3>TTS Voice</h3>
+    <select id="voiceSelect"></select>
+  </div>
+
+  <script>
+    const callBtn = document.getElementById('callBtn');
+    const controls = document.getElementById('controls');
+    const muteBtn = document.getElementById('muteBtn');
+    const endBtn = document.getElementById('endBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const statusEl = document.getElementById('status');
+    const transcriptEl = document.getElementById('transcript');
+    const hintEl = document.getElementById('hint');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const overlay = document.getElementById('overlay');
+    const closeSettings = document.getElementById('closeSettings');
+    const voiceSelect = document.getElementById('voiceSelect');
+
+    // --- State ---
+    let inCall = false;
+    let muted = false;
+    let chat = null;
+    let recognition = null;
+    let speaking = false; // true while TTS is outputting audio
+
+    /*
+     * DESIGN:
+     * - Half-duplex: mic is OFF while agent speaks, ON when agent is silent.
+     * - This completely eliminates echo/feedback.
+     * - To interrupt: user taps the call button (which shows a tap-to-talk icon while agent speaks).
+     *   This stops TTS immediately and turns mic on.
+     * - The call button serves triple duty:
+     *   1. Before call: start call (green, pulsing)
+     *   2. While listening: shows listening state (green, breathing)
+     *   3. While agent speaks: tap to interrupt (blue, pulsing) 
+     */
+
+    // --- Voices ---
+    function populateVoices() {
+      const voices = speechSynthesis.getVoices();
+      voiceSelect.innerHTML = '';
+      voices.forEach((v, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `${v.name} (${v.lang})`;
+        if (v.default) opt.selected = true;
+        voiceSelect.appendChild(opt);
+      });
+    }
+    speechSynthesis.onvoiceschanged = populateVoices;
+    populateVoices();
+
+    // --- Settings ---
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.classList.add('open');
+      overlay.classList.add('visible');
+    });
+    function closeSettingsPanel() {
+      settingsPanel.classList.remove('open');
+      overlay.classList.remove('visible');
+    }
+    closeSettings.addEventListener('click', closeSettingsPanel);
+    overlay.addEventListener('click', closeSettingsPanel);
+
+    // --- TTS ---
+    let ttsQueue = [];
+
+    function speakText(text) {
+      if (!text.trim()) return;
+      ttsQueue.push(text);
+      if (!speaking) playNextTTS();
+    }
+
+    function playNextTTS() {
+      if (ttsQueue.length === 0) {
+        speaking = false;
+        enterListeningState();
+        return;
+      }
+      speaking = true;
+      enterAgentSpeakingState();
+      stopListening(); // mic OFF while agent talks
+
+      const text = ttsQueue.shift();
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = speechSynthesis.getVoices();
+      const selected = voices[voiceSelect.value];
+      if (selected) utterance.voice = selected;
+      utterance.onend = () => playNextTTS();
+      utterance.onerror = () => playNextTTS();
+      speechSynthesis.speak(utterance);
+    }
+
+    function stopSpeaking() {
+      ttsQueue = [];
+      speechSynthesis.cancel();
+      speaking = false;
+    }
+
+    // --- UI states during call ---
+    function enterListeningState() {
+      if (!inCall) return;
+      callBtn.className = 'call-btn listening';
+      callBtn.textContent = '🎙️';
+      hintEl.textContent = 'Listening...';
+      if (!muted) startListening();
+    }
+
+    function enterAgentSpeakingState() {
+      if (!inCall) return;
+      callBtn.className = 'call-btn agent-speaking';
+      callBtn.textContent = '✋';
+      hintEl.textContent = 'Tap to interrupt';
+    }
+
+    // --- Speech Recognition ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    function startListening() {
+      if (!SpeechRecognition || muted || speaking) return;
+      if (recognition) return;
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (interimTranscript) {
+          transcriptEl.textContent = interimTranscript;
+        }
+
+        if (finalTranscript.trim()) {
+          transcriptEl.textContent = '';
+          if (chat) chat.send(finalTranscript.trim());
+        }
+      };
+
+      recognition.onerror = (e) => {
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+          console.warn('Speech recognition error:', e.error);
+        }
+      };
+
+      recognition.onend = () => {
+        recognition = null;
+        if (inCall && !muted && !speaking) startListening();
+      };
+
+      recognition.start();
+    }
+
+    function stopListening() {
+      if (recognition) {
+        recognition.onend = null;
+        recognition.abort();
+        recognition = null;
+      }
+      transcriptEl.textContent = '';
+    }
+
+    // --- Streaming Chat ---
+    const _savedPasskey = new URLSearchParams(window.location.search).get('passkey');
+
+    async function connectChat() {
+      if (!_savedPasskey) {
+        statusEl.textContent = 'Missing passkey in URL';
+        return null;
+      }
+
+      const res = await fetch(`./api/init?passkey=${encodeURIComponent(_savedPasskey)}`);
+      if (!res.ok) {
+        statusEl.textContent = 'Failed to connect';
+        return null;
+      }
+      const { agentId, layerIndex, accessKey, engineUrl } = await res.json();
+
+      let buffer = '';
+
+      const chatInstance = openStreamingChat(agentId, layerIndex, {
+        onChunk: (chunk) => {
+          buffer += chunk;
+          if (/[.!?\n]/.test(chunk)) {
+            speakText(buffer.trim());
+            buffer = '';
+          }
+        },
+        onResponse: () => {
+          if (buffer.trim()) {
+            speakText(buffer.trim());
+            buffer = '';
+          }
+        },
+        onError: (err) => {
+          console.warn('Chat error:', err);
+          statusEl.textContent = 'Connection error';
+        },
+        onOpen: () => {
+          statusEl.textContent = 'In call';
+        },
+        onClose: () => {
+          if (inCall) endCall();
+        },
+      }, { accessKey, engineUrl });
+
+      return chatInstance;
+    }
+
+    // --- Call lifecycle ---
+    async function startCall() {
+      inCall = true;
+      callBtn.className = 'call-btn listening';
+      callBtn.textContent = '🎙️';
+      controls.classList.add('visible');
+      statusEl.textContent = 'Connecting...';
+      transcriptEl.textContent = '';
+      hintEl.textContent = '';
+
+      chat = await connectChat();
+      if (!chat) {
+        endCall();
+        return;
+      }
+
+      enterListeningState();
+    }
+
+    function endCall() {
+      inCall = false;
+      stopListening();
+      stopSpeaking();
+      if (chat) { chat.close(); chat = null; }
+      callBtn.className = 'call-btn start';
+      callBtn.textContent = '📞';
+      controls.classList.remove('visible');
+      statusEl.textContent = 'Call ended';
+      transcriptEl.textContent = '';
+      hintEl.textContent = '';
+      setTimeout(() => { statusEl.textContent = 'Tap to start a call'; }, 2000);
+    }
+
+    // --- Call button: start / interrupt ---
+    callBtn.addEventListener('click', () => {
+      if (!inCall) {
+        startCall();
+      } else if (speaking) {
+        // Interrupt: stop agent, resume mic
+        stopSpeaking();
+        if (chat) chat.cancel();
+        enterListeningState();
+      }
+    });
+
+    // --- End call button ---
+    endBtn.addEventListener('click', () => endCall());
+
+    // --- Mute ---
+    muteBtn.addEventListener('click', () => {
+      muted = !muted;
+      muteBtn.classList.toggle('active', muted);
+      muteBtn.textContent = muted ? '🔇' : '🎙️';
+      if (muted) {
+        stopListening();
+        if (!speaking) hintEl.textContent = 'Muted';
+      } else if (inCall && !speaking) {
+        startListening();
+        hintEl.textContent = 'Listening...';
+      }
+    });
+
+    // --- openStreamingChat (browser WebSocket) ---
+    function openStreamingChat(agentId, layerIndex, events, config) {
+      const base = config.engineUrl.replace(/^http/, 'ws');
+      const token = config.accessKey || '';
+      const url = `${base}/agents/${agentId}/layers/${layerIndex}/ws?token=${encodeURIComponent(token)}`;
+
+      const ws = new WebSocket(url);
+      let fullText = '';
+
+      ws.onopen = () => { if (events.onOpen) events.onOpen(); };
+      ws.onmessage = (e) => {
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+        switch (msg.channel) {
+          case 'response':
+            fullText += msg.data;
+            if (events.onChunk) events.onChunk(msg.data);
+            break;
+          case 'response_end':
+            if (events.onResponse) events.onResponse(fullText);
+            fullText = '';
+            break;
+          case 'response_cancelled':
+            fullText = '';
+            if (events.onCancelled) events.onCancelled();
+            break;
+          case 'error':
+            fullText = '';
+            if (events.onError) events.onError(msg.data);
+            break;
+        }
+      };
+      ws.onclose = () => { if (events.onClose) events.onClose(); };
+      ws.onerror = () => { if (events.onError) events.onError('WebSocket error'); };
+
+      return {
+        send(message) { fullText = ''; ws.send(JSON.stringify({ message })); },
+        cancel() { ws.send(JSON.stringify({ type: 'cancel' })); },
+        close() { ws.close(); },
+      };
+    }
+
+    // Clean passkey from URL
+    if (_savedPasskey) {
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete('passkey');
+      window.history.replaceState({}, '', clean.pathname + clean.search);
+    }
+  </script>
+</body>
+</html>

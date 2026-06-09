@@ -18,7 +18,7 @@ export const webhookService = defineService({
       },
       body: {
         description: "Webhook endpoint. Use this to send events to this agent. Webhooks expose your agent to the public internet, so only use them for testing.",
-        endpoint: `${process.env.WEBHOOK_URL}/${context.identity.layerId}`,
+        endpoint: `${process.env.SELF_PUBLIC_URL}/services/webhook/api/event/${context.identity.layerId}`,
       },
     });
   },

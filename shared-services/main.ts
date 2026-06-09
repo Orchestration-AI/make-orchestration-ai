@@ -1,7 +1,7 @@
 import { createApp } from "@orchestration-ai/sdk/app-builder";
 import type { Setting } from "@orchestration-ai/sdk/services";
-import { createEngineClient, createApiClient } from "@orchestration-ai/sdk/services";
-import { settingFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
+import { createEngineClient, createApiClient, getTextSetting } from "@orchestration-ai/sdk/services";
+import { settingFindByAgent, authDecryptPasskey, authGeneratePasskey } from "@orchestration-ai/sdk/sdk.gen";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
 import process from "node:process";
 import { Server } from "socket.io";
@@ -12,6 +12,8 @@ import { sqlServerService } from "./sql-server/sql-server.service.definition.ts"
 import { mailService } from "./mail/mail.service.definition.ts";
 import { webhookService } from "./webhook/webhook.service.definition.ts";
 import { mathjsService } from "./mathjs/mathjs.service.definition.ts";
+import { telnyxVoiceService } from "./telnyx-voice/telnyx-voice.service.definition.ts";
+import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
 import { sendMarkdownMail } from "./mail/mail.service.ts";
 import { sendMessageToAgent } from "./voice/voice.service.ts";
 import { getContext } from "./context.middleware.ts";
@@ -38,7 +40,8 @@ function main() {
     .service(sqlServerService)
     .service(mailService)
     .service(webhookService)
-    .service(mathjsService);
+    .service(mathjsService)
+    .service(telnyxVoiceService);
 
   // Custom: mail zapier webhook (receives emails from Zapier)
   app.expressApp.post(
@@ -116,6 +119,72 @@ function main() {
       } catch (e) {
         console.warn(e);
         res.status(500).send(`${e}`);
+      }
+    }
+  );
+
+  // Custom: telnyx voice webhook
+  app.expressApp.post(
+    "/services/telnyx-voice/api/webhook/:layerId",
+    handleTelnyxWebhook
+  );
+
+  // Custom: telnyx voice call page
+  app.expressApp.use(
+    "/services/telnyx-voice/call",
+    express.static("./telnyx-voice/public")
+  );
+
+  // Custom: telnyx voice init endpoint (decrypts passkey, returns chat config)
+  app.expressApp.get(
+    "/services/telnyx-voice/call/api/init",
+    async (req, res) => {
+      try {
+        const passkey = req.query.passkey as string;
+        if (!passkey) { res.status(400).send("Missing passkey"); return; }
+
+        const apiClient = createApiClient();
+        const { data: decrypted } = await authDecryptPasskey({
+          body: { passkey },
+          client: apiClient,
+        });
+        const layerId = decrypted?.data as string;
+        if (!layerId) { res.status(401).send("Invalid passkey"); return; }
+
+        const context = await getContext(layerId);
+        const clientId = getRequiredEnvValue("OAI_CLIENT_ID");
+        const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
+
+        setupClientCredentials(apiClient, {
+          client_id: `${clientId}:${context.identity.workspaceOwnerId}`,
+          client_secret: accessKey,
+        });
+        const { data: settingsData } = await settingFindByAgent({
+          client: apiClient,
+          path: {
+            workspaceId: context.identity.workspaceId,
+            orchestrationId: context.identity.orchestrationId,
+            agentId: context.identity.agentId,
+          },
+        });
+        const settings = (settingsData?.settings ?? []) as Setting[];
+        const layerIndex = parseInt(getTextSetting(settings, "AGENT_LAYER") ?? "0", 10);
+
+        // Generate a short-lived passkey for the browser to use as accessKey
+        const { data: inferencePasskey } = await authGeneratePasskey({ client: apiClient });
+        
+        const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
+        const engineUrl = engineClient.getConfig().baseURL as string;
+
+        res.json({
+          agentId: context.identity.agentId,
+          layerIndex,
+          accessKey: inferencePasskey?.passkey ?? "",
+          engineUrl,
+        });
+      } catch (e) {
+        console.warn(e);
+        res.status(500).send("Init failed");
       }
     }
   );
