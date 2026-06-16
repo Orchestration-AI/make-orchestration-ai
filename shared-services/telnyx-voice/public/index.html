@@ -286,13 +286,13 @@
       if (recognition) return;
 
       recognition = new SpeechRecognition();
-      recognition.continuous = true;
+      recognition.continuous = false; // Use non-continuous to avoid Android duplication
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
       let pendingFinal = '';
       let sendTimer = null;
-      const SEND_DELAY = 800; // wait for user to finish speaking
+      const SEND_DELAY = 1000;
 
       function flushToAgent() {
         sendTimer = null;
@@ -305,7 +305,7 @@
       recognition.onresult = (event) => {
         let finalTranscript = '';
         let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        for (let i = 0; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript;
           } else {
@@ -316,11 +316,9 @@
         if (finalTranscript) {
           pendingFinal += ' ' + finalTranscript;
           transcriptEl.textContent = pendingFinal.trim();
-          // Reset timer — wait for more speech
           if (sendTimer) clearTimeout(sendTimer);
           sendTimer = setTimeout(flushToAgent, SEND_DELAY);
         } else if (interimTranscript) {
-          // User is still talking — show it and reset timer
           transcriptEl.textContent = (pendingFinal + ' ' + interimTranscript).trim();
           if (sendTimer) { clearTimeout(sendTimer); sendTimer = null; }
         }
@@ -334,7 +332,15 @@
 
       recognition.onend = () => {
         recognition = null;
-        if (inCall && !muted && !speaking) startListening();
+        // In non-continuous mode, recognition ends after each utterance.
+        // If there's pending text with a running timer, let it flush.
+        // Then restart to keep listening.
+        if (inCall && !muted && !speaking) {
+          // Small delay before restarting to let flush happen
+          setTimeout(() => {
+            if (inCall && !muted && !speaking) startListening();
+          }, 100);
+        }
       };
 
       recognition.start();
@@ -462,7 +468,8 @@
         return;
       }
 
-      enterListeningState();
+      // Don't start listening yet — wait for agent greeting to finish.
+      // enterListeningState() will be called by playNextTTS when TTS queue empties.
     }
 
     function endCall() {
