@@ -3,7 +3,7 @@
   "specifiers": {
     "jsr:@std/assert@1": "1.0.6",
     "jsr:@std/internal@^1.0.4": "1.0.4",
-    "npm:@orchestration-ai/sdk@0.9.0": "0.9.0",
+    "npm:@orchestration-ai/sdk@0.9.1": "0.9.1",
     "npm:@types/express@5.0.0": "5.0.0",
     "npm:@types/mssql@9.1.5": "9.1.5",
     "npm:@types/node@*": "22.7.7",
@@ -182,8 +182,8 @@
     "@js-joda/core@5.6.3": {
       "integrity": "sha512-T1rRxzdqkEXcou0ZprN1q9yDRlvzCPLqmlNt5IIsGBzoEVgLCCYrKEwc84+TvsXuAc95VAZwtWD2zVsKPY4bcA=="
     },
-    "@orchestration-ai/sdk@0.9.0": {
-      "integrity": "sha512-iFh7P74Arbt1nPKJGBg7S4Rcx05Kf765S1BHGF4OgS17sU7cI06tOHjpmPKuhZvlEFwmWMwQOKuPKER/9wzwCg==",
+    "@orchestration-ai/sdk@0.9.1": {
+      "integrity": "sha512-OAY5Epm/GtswAiWPQr5myqoW4wmD6gnQiQOc0kmbeq81SXWrQGkTqkajCK8B0l9hpAAkLSXszSgZVCXNNq9Xzg==",
       "dependencies": [
         "axios",
         "express"
@@ -336,8 +336,8 @@
     "asynckit@0.4.0": {
       "integrity": "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q=="
     },
-    "axios@1.17.0": {
-      "integrity": "sha512-J8SwNxprqqpbfenehxWYXE7CW+wM1BB4w3+N+g+/Wx40xM4rsLrfPmHHxSWIxJLYDgSY/HqlFPIYb2/S3rxafw==",
+    "axios@1.18.0": {
+      "integrity": "sha512-E32NzpYKp++W7XRe52rHiXV2ehxmh3wbdgO7MHeFM+vqxLBYHzt0ElkiImtOBxtOmyp0yoC8C6uESVV84Y2/hw==",
       "dependencies": [
         "follow-redirects",
         "form-data",
@@ -616,8 +616,8 @@
     "follow-redirects@1.16.0": {
       "integrity": "sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw=="
     },
-    "form-data@4.0.5": {
-      "integrity": "sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==",
+    "form-data@4.0.6": {
+      "integrity": "sha512-vKatAh4SlVfgbv+YtmhiRjhEMJsYpsG1Y2rMQtR+SVSbytsSD1YGzDIcrAJmdFec88u/+VoGmxnl+80gL1tRCQ==",
       "dependencies": [
         "asynckit",
         "combined-stream",
@@ -681,8 +681,8 @@
         "has-symbols"
       ]
     },
-    "hasown@2.0.2": {
-      "integrity": "sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==",
+    "hasown@2.0.4": {
+      "integrity": "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==",
       "dependencies": [
         "function-bind"
       ]
@@ -1178,7 +1178,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1",
-      "npm:@orchestration-ai/sdk@0.9.0",
+      "npm:@orchestration-ai/sdk@0.9.1",
       "npm:express@5.0.0",
       "npm:mathjs@^15.1.0",
       "npm:mssql@^11.0.1",

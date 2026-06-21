@@ -38,7 +38,7 @@ export function openStreamingChat(
   events: StreamingChatEvents,
   config?: StreamingChatConfig
 ): StreamingChat {
-  const engineUrl = config?.engineUrl || getEnv('ENGINE_URL') || 'https://engine.orchestration-ai.com';
+  const engineUrl = config?.engineUrl || getEnv('ENGINE_URL') || 'https://oai-inference-engine-21142163942.africa-south1.run.app';
   const accessKey = config?.accessKey || getEnv('OAI_ACCESS_KEY') || '';
 
   const wsUrl = engineUrl.replace(/^http/, 'ws');
