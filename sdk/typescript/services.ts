@@ -58,8 +58,8 @@ export function createEngineClient(engineUrl: string | null, accessKey: string):
 export function createEngineClient(accessKey: string): Client;
 export function createEngineClient(engineUrlOrAccessKey: string | null, accessKey?: string): Client {
   const url = accessKey
-    ? (engineUrlOrAccessKey ?? "https://engine.orchestration-ai.com")
-    : "https://engine.orchestration-ai.com";
+    ? (engineUrlOrAccessKey ?? "https://oai-inference-engine-21142163942.africa-south1.run.app")
+    : "https://oai-inference-engine-21142163942.africa-south1.run.app";
   const key = accessKey ?? (engineUrlOrAccessKey as string);
   return createClient(createConfig({
     baseURL: url,

@@ -216,7 +216,6 @@ const chat = openStreamingChat('agent-id', 0, {
   onClose: () => console.log('[Disconnected]'),
 }, {
   accessKey: 'your-access-key', // optional — falls back to OAI_ACCESS_KEY env
-  engineUrl: 'https://engine.orchestration-ai.com', // optional — falls back to ENGINE_URL env
 });
 
 // Send a message (agent streams its reply via onChunk)
