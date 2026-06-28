@@ -7,12 +7,14 @@ import { getRequiredEnvValue } from "../environment.ts";
 import process from "node:process";
 import type { Socket } from "socket.io";
 
-export function sendMessageToAgent(message: string, context: Context, engineClient: Client) {
-  return sendMessages(context.identity.agentId, 0, [{ message }], context.identity.layerId, engineClient);
+
+export function sendMessageToAgent(message: string, context: Context, engineClient: Client, sessionId?: string) {
+  return sendMessages(context.identity.agentId, 0, [{ message }], context.identity.layerId, engineClient, sessionId);
 }
 
 export function addSocket(socket: Socket) {
   let cachedLayerId: string | null = null;
+  const sessionId = crypto.randomUUID();
 
   socket.on("message", async (msg) => {
     const apiClient = createApiClient();
@@ -30,7 +32,7 @@ export function addSocket(socket: Socket) {
     }
     
     const context = await getContext(cachedLayerId);
-    const response = await sendMessageToAgent(msg.message, context, engineClient);
+    const response = await sendMessageToAgent(msg.message, context, engineClient, sessionId);
 
     socket.emit("message", { message: response });
   });

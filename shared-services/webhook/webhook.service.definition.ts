@@ -17,7 +17,7 @@ export const webhookService = defineService({
         agentId: context.identity.agentId,
       },
       body: {
-        description: "Webhook endpoint. Use this to send events to this agent. Webhooks expose your agent to the public internet, so only use them for testing.",
+        description: "Webhook endpoint. Use this to send events to this agent. Webhooks expose your agent to the public internet, so only use them for testing. Pass an optional 'X-Session-Id' header to maintain persisted conversation history across multiple requests.",
         endpoint: `${process.env.SELF_PUBLIC_URL}/services/webhook/api/event/${context.identity.layerId}`,
       },
     });

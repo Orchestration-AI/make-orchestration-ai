@@ -57,6 +57,7 @@ function main() {
           client_secret: `${accessKey}:${context.identity.workspaceOwnerId}`,
         });
 
+        const sessionId = req.headers['x-session-id'] as string | undefined;
         const { body: markdownBody, from, cc, bcc, subject } = req.body;
 
         let message = `New e-mail from ${from}\nSubject: ${subject}\n`;
@@ -66,7 +67,8 @@ function main() {
         const agentResponse = await sendMessageToAgent(
           `${message}\n${markdownBody}`,
           context,
-          engineClient
+          engineClient,
+          sessionId
         );
 
         const { data } = await settingFindByAgent({
@@ -104,6 +106,7 @@ function main() {
         const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
         const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
 
+        const sessionId = req.headers['x-session-id'] as string | undefined;
         const body = JSON.stringify(req.body);
         const headersText = Object.entries(req.headers)
           .map(([key, value]) => `${key}: ${value}`)
@@ -112,7 +115,8 @@ function main() {
         const agentResponse = await sendMessageToAgent(
           `New Webhook event\n\nHeaders:${headersText}\n\nJSON Body:\n${body}\n`,
           context,
-          engineClient
+          engineClient,
+          sessionId
         );
 
         res.send(agentResponse);
