@@ -3,7 +3,7 @@
   "specifiers": {
     "jsr:@std/assert@1": "1.0.6",
     "jsr:@std/internal@^1.0.4": "1.0.4",
-    "npm:@orchestration-ai/sdk@0.9.1": "0.9.1",
+    "npm:@orchestration-ai/sdk@0.10.0": "0.10.0",
     "npm:@types/express@5.0.0": "5.0.0",
     "npm:@types/mssql@9.1.5": "9.1.5",
     "npm:@types/node@*": "22.7.7",
@@ -182,8 +182,8 @@
     "@js-joda/core@5.6.3": {
       "integrity": "sha512-T1rRxzdqkEXcou0ZprN1q9yDRlvzCPLqmlNt5IIsGBzoEVgLCCYrKEwc84+TvsXuAc95VAZwtWD2zVsKPY4bcA=="
     },
-    "@orchestration-ai/sdk@0.9.1": {
-      "integrity": "sha512-OAY5Epm/GtswAiWPQr5myqoW4wmD6gnQiQOc0kmbeq81SXWrQGkTqkajCK8B0l9hpAAkLSXszSgZVCXNNq9Xzg==",
+    "@orchestration-ai/sdk@0.10.0": {
+      "integrity": "sha512-AWnjwTm16Tt/fYdQHm+71dh7BGMzr5/Uh7aAmIe8jUYFQKgevmzhUT84DZiUzoo2ptu32UsVR7dXHara2st37g==",
       "dependencies": [
         "axios",
         "express"
@@ -336,8 +336,8 @@
     "asynckit@0.4.0": {
       "integrity": "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q=="
     },
-    "axios@1.18.0": {
-      "integrity": "sha512-E32NzpYKp++W7XRe52rHiXV2ehxmh3wbdgO7MHeFM+vqxLBYHzt0ElkiImtOBxtOmyp0yoC8C6uESVV84Y2/hw==",
+    "axios@1.18.1": {
+      "integrity": "sha512-3nTvFlvpn9Zu/RkHUqtc7/+al4UpRW5az71ap5zccp6e8RAYEzhMTecX8Dz1wWDYrPpUoB1HAQEGEAEvUr7S9g==",
       "dependencies": [
         "follow-redirects",
         "form-data",
@@ -1178,7 +1178,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1",
-      "npm:@orchestration-ai/sdk@0.9.1",
+      "npm:@orchestration-ai/sdk@0.10.0",
       "npm:express@5.0.0",
       "npm:mathjs@^15.1.0",
       "npm:mssql@^11.0.1",

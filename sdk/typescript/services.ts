@@ -161,13 +161,15 @@ export async function sendMessages(
   layerIndex: number,
   messages: Message[],
   layerId: string,
-  client: Client
+  client: Client,
+  sessionId?: string
 ): Promise<string> {
   const response = await client.post({
     url: `/agents/${agentId}/layers/${layerIndex}/messages`,
     headers: {
       'X-LayerId': layerId,
       'Content-Type': 'application/json',
+      ...(sessionId ? { 'x-session-id': sessionId } : {}),
     },
     body: messages,
     responseType: 'text',

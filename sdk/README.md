@@ -200,6 +200,21 @@ const response = await sendMessages(
 );
 ```
 
+Pass an optional `sessionId` to maintain conversation history across multiple calls. Without it, each call is stateless:
+
+```typescript
+const sessionId = crypto.randomUUID();
+
+const response = await sendMessages(
+  agentId,
+  layerIndex,
+  [{ message: "Hello" }],
+  context.identity.layerId,
+  engineClient,
+  sessionId
+);
+```
+
 ### Streaming Chat
 
 For realtime, streaming conversations with agents, use `openStreamingChat`. It opens a WebSocket connection and streams the agent's response chunk by chunk. Works in both Node.js and the browser - no extra dependencies required.
@@ -216,6 +231,7 @@ const chat = openStreamingChat('agent-id', 0, {
   onClose: () => console.log('[Disconnected]'),
 }, {
   accessKey: 'your-access-key', // optional — falls back to OAI_ACCESS_KEY env
+  sessionId: 'optional-session-id', // optional — enables conversation persistence
 });
 
 // Send a message (agent streams its reply via onChunk)

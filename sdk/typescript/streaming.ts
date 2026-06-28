@@ -8,6 +8,7 @@ export type ServerMessage = {
 export type StreamingChatConfig = {
   engineUrl?: string;
   accessKey?: string;
+  sessionId?: string;
 };
 
 export type StreamingChatEvents = {
@@ -42,7 +43,8 @@ export function openStreamingChat(
   const accessKey = config?.accessKey || getEnv('OAI_ACCESS_KEY') || '';
 
   const wsUrl = engineUrl.replace(/^http/, 'ws');
-  const url = `${wsUrl}/agents/${agentId}/layers/${layerIndex}/ws?token=${encodeURIComponent(accessKey)}`;
+  const sessionId = config?.sessionId;
+  const url = `${wsUrl}/agents/${agentId}/layers/${layerIndex}/ws?token=${encodeURIComponent(accessKey)}${sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : ''}`;
 
   const ws = new WebSocket(url);
   let buffer = '';
