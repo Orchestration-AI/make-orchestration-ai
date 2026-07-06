@@ -1,5 +1,3 @@
-const socket = io(window.location.origin, { path: "/hooks/voice-io" });
-
 const messagesEl = document.getElementById("messages");
 const statusEl = document.getElementById("msg");
 const promptInput = document.getElementById("prompt");
@@ -69,6 +67,7 @@ function addMessage(text, type) {
 
 function setStatus(text) {
   statusEl.textContent = text;
+  statusEl.classList.toggle("connecting", connecting && !!text);
 }
 
 // --- TTS ---
@@ -83,16 +82,52 @@ function speak(text) {
   window.speechSynthesis.speak(msg);
 }
 
-// --- Socket ---
-socket.on("message", (data) => {
-  hideTyping();
-  addMessage(data.message, "agent");
-  setStatus("");
-  speak(data.message);
-});
+// --- WebSocket streaming chat ---
+let chat = null;
+let connecting = true;
+let pendingMessages = [];
 
-// --- Send ---
-// --- Remove passkey from URL after load ---
+function openStreamingChat(agentId, layerIndex, events, config) {
+  const base = config.engineUrl.replace(/^http/, "ws");
+  const token = config.accessKey || "";
+  const url = `${base}/agents/${agentId}/layers/${layerIndex}/ws?token=${encodeURIComponent(token)}`;
+
+  const ws = new WebSocket(url);
+  let fullText = "";
+
+  ws.onopen = () => { if (events.onOpen) events.onOpen(); };
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    switch (msg.channel) {
+      case "response":
+        fullText += msg.data;
+        if (events.onChunk) events.onChunk(msg.data);
+        break;
+      case "response_end":
+        if (events.onResponse) events.onResponse(fullText);
+        fullText = "";
+        break;
+      case "response_cancelled":
+        fullText = "";
+        break;
+      case "error":
+        fullText = "";
+        if (events.onError) events.onError(msg.data);
+        break;
+    }
+  };
+  ws.onclose = () => { if (events.onClose) events.onClose(); };
+  ws.onerror = () => { if (events.onError) events.onError("WebSocket error"); };
+
+  return {
+    send(message) { fullText = ""; ws.send(JSON.stringify({ message })); },
+    cancel() { ws.send(JSON.stringify({ type: "cancel" })); },
+    close() { ws.close(); },
+  };
+}
+
+// --- Init: get config and connect directly to engine ---
 const _urlParams = new URLSearchParams(window.location.search);
 const _passkey = _urlParams.get("passkey");
 if (_passkey) {
@@ -101,12 +136,60 @@ if (_passkey) {
   window.history.replaceState({}, document.title, _cleanUrl.pathname + _cleanUrl.search);
 }
 
-async function sendMessageToAgent(message) {
+async function initChat() {
+  if (!_passkey) {
+    setStatus("Missing passkey");
+    return;
+  }
+  setStatus("Connecting...");
+
+  const res = await fetch(`./api/init?passkey=${encodeURIComponent(_passkey)}`);
+  if (!res.ok) {
+    setStatus("Failed to connect");
+    return;
+  }
+  const { agentId, layerIndex, accessKey, engineUrl } = await res.json();
+
+  chat = openStreamingChat(agentId, layerIndex, {
+    onChunk: () => {},
+    onResponse: (fullText) => {
+      hideTyping();
+      addMessage(fullText, "agent");
+      setStatus("");
+      speak(fullText);
+    },
+    onError: (err) => {
+      hideTyping();
+      setStatus("Error: " + err);
+    },
+    onOpen: () => {
+      connecting = false;
+      setStatus("");
+      pendingMessages.forEach((m) => sendMessageToAgent(m));
+      pendingMessages = [];
+    },
+    onClose: () => {
+      setStatus("Disconnected");
+      chat = null;
+    },
+  }, { accessKey, engineUrl });
+}
+
+initChat();
+
+// --- Send ---
+function sendMessageToAgent(message) {
   if (!message.trim()) return;
+  if (connecting) {
+    addMessage(message, "user");
+    pendingMessages.push(message);
+    return;
+  }
+  if (!chat) { setStatus("Not connected"); return; }
   addMessage(message, "user");
   showTyping();
   setStatus("Processing...");
-  socket.emit("message", { message, passkey: _passkey });
+  chat.send(message);
 }
 
 sendButton.addEventListener("click", () => {
