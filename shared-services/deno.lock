@@ -3,7 +3,7 @@
   "specifiers": {
     "jsr:@std/assert@1": "1.0.6",
     "jsr:@std/internal@^1.0.4": "1.0.4",
-    "npm:@orchestration-ai/sdk@0.10.0": "0.10.0",
+    "npm:@orchestration-ai/sdk@0.13.0": "0.13.0",
     "npm:@types/express@5.0.0": "5.0.0",
     "npm:@types/mssql@9.1.5": "9.1.5",
     "npm:@types/node@*": "22.7.7",
@@ -182,8 +182,8 @@
     "@js-joda/core@5.6.3": {
       "integrity": "sha512-T1rRxzdqkEXcou0ZprN1q9yDRlvzCPLqmlNt5IIsGBzoEVgLCCYrKEwc84+TvsXuAc95VAZwtWD2zVsKPY4bcA=="
     },
-    "@orchestration-ai/sdk@0.10.0": {
-      "integrity": "sha512-AWnjwTm16Tt/fYdQHm+71dh7BGMzr5/Uh7aAmIe8jUYFQKgevmzhUT84DZiUzoo2ptu32UsVR7dXHara2st37g==",
+    "@orchestration-ai/sdk@0.13.0": {
+      "integrity": "sha512-mt9oejHbldjOD1YAB7kCzs2VSkne0meHC7wjwfVCC9kecHKoWC8ROgFrUWshP3RrTyv781ZbEMa9p+PZCBNrLw==",
       "dependencies": [
         "axios",
         "express"
@@ -1178,7 +1178,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1",
-      "npm:@orchestration-ai/sdk@0.10.0",
+      "npm:@orchestration-ai/sdk@0.13.0",
       "npm:express@5.0.0",
       "npm:mathjs@^15.1.0",
       "npm:mssql@^11.0.1",
