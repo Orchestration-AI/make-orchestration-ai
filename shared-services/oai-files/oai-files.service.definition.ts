@@ -5,6 +5,7 @@ import {
   listFilesWorkspace, listFilesOrchestration, listFilesAgent, listFilesLayer,
   getDownloadUrlWorkspace, getDownloadUrlOrchestration, getDownloadUrlAgent, getDownloadUrlLayer,
   getUploadUrlWorkspace, getUploadUrlOrchestration, getUploadUrlAgent, getUploadUrlLayer,
+  writeTextWorkspace, writeTextOrchestration, writeTextAgent, writeTextLayer,
   deleteFileWorkspace, deleteFileOrchestration, deleteFileAgent, deleteFileLayer,
   createDirWorkspace, createDirOrchestration, createDirAgent, createDirLayer,
   deleteDirWorkspace, deleteDirOrchestration, deleteDirAgent, deleteDirLayer,
@@ -32,6 +33,11 @@ export const oaiFilesService = defineServiceWithDynamicDescription({
     get_upload_url_orchestration: getUploadUrlOrchestration,
     get_upload_url_agent: getUploadUrlAgent,
     get_upload_url_layer: getUploadUrlLayer,
+
+    write_text_workspace: writeTextWorkspace,
+    write_text_orchestration: writeTextOrchestration,
+    write_text_agent: writeTextAgent,
+    write_text_layer: writeTextLayer,
 
     delete_file_workspace: deleteFileWorkspace,
     delete_file_orchestration: deleteFileOrchestration,

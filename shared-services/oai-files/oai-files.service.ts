@@ -12,6 +12,21 @@ import {
 type PathBody = { path?: string };
 type FileBody = { path: string };
 type UploadBody = { path: string; content_type: string };
+type WriteTextBody = { path: string; content: string; content_type?: string };
+
+// ── Shared GCS upload helper ───────────────────────────────────────────────────
+
+export async function putToSignedUrl(uploadUrl: string, bytes: Uint8Array, contentType: string, maxSizeBytes: number): Promise<void> {
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    body: bytes.buffer as ArrayBuffer,
+    headers: {
+      "Content-Type": contentType,
+      "x-goog-content-length-range": `0,${maxSizeBytes}`,
+    },
+  });
+  if (!res.ok) throw new Error(`GCS upload failed: ${res.status} ${res.statusText}`);
+}
 
 function ids(context: Context) {
   const { workspaceId, orchestrationId, agentId, layerId } = context.identity;
@@ -198,4 +213,50 @@ export async function getFileMetadataLayer(body: FileBody, context: Context, _e:
   const { workspaceId, orchestrationId, agentId, layerId } = ids(context);
   const { data } = await storageFileMetadataLayer({ client: apiClient, path: { workspaceId, orchestrationId, agentId, layerId }, query: { path: body.path } });
   return data;
+}
+
+// ── Write text file ────────────────────────────────────────────────────────────
+
+async function writeText(
+  body: WriteTextBody,
+  getUploadFn: (path: string, contentType: string) => Promise<{ upload_url?: string; max_size_bytes?: number } | undefined>,
+): Promise<{ success: true; path: string }> {
+  const contentType = body.content_type ?? "text/plain";
+  const data = await getUploadFn(body.path, contentType);
+  if (!data?.upload_url) throw new Error("Failed to get signed upload URL.");
+  const bytes = new TextEncoder().encode(body.content);
+  await putToSignedUrl(data.upload_url, bytes, contentType, data.max_size_bytes ?? 104857600);
+  return { success: true, path: body.path };
+}
+
+export function writeTextWorkspace(body: WriteTextBody, context: Context, _e: Client, apiClient: Client) {
+  return writeText(body, async (path, content_type) => {
+    const { workspaceId } = ids(context);
+    const { data } = await storageUploadFileWorkspace({ client: apiClient, path: { workspaceId }, body: { path, content_type } });
+    return data;
+  });
+}
+
+export function writeTextOrchestration(body: WriteTextBody, context: Context, _e: Client, apiClient: Client) {
+  return writeText(body, async (path, content_type) => {
+    const { workspaceId, orchestrationId } = ids(context);
+    const { data } = await storageUploadFileOrch({ client: apiClient, path: { workspaceId, orchestrationId }, body: { path, content_type } });
+    return data;
+  });
+}
+
+export function writeTextAgent(body: WriteTextBody, context: Context, _e: Client, apiClient: Client) {
+  return writeText(body, async (path, content_type) => {
+    const { workspaceId, orchestrationId, agentId } = ids(context);
+    const { data } = await storageUploadFileAgent({ client: apiClient, path: { workspaceId, orchestrationId, agentId }, body: { path, content_type } });
+    return data;
+  });
+}
+
+export function writeTextLayer(body: WriteTextBody, context: Context, _e: Client, apiClient: Client) {
+  return writeText(body, async (path, content_type) => {
+    const { workspaceId, orchestrationId, agentId, layerId } = ids(context);
+    const { data } = await storageUploadFileLayer({ client: apiClient, path: { workspaceId, orchestrationId, agentId, layerId }, body: { path, content_type } });
+    return data;
+  });
 }
