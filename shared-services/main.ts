@@ -13,6 +13,7 @@ import { webhookService } from "./webhook/webhook.service.definition.ts";
 import { mathjsService } from "./mathjs/mathjs.service.definition.ts";
 import { telnyxVoiceService } from "./telnyx-voice/telnyx-voice.service.definition.ts";
 import { oaiFilesService } from "./oai-files/oai-files.service.definition.ts";
+import { multimediaService } from "./multimedia/multimedia.service.definition.ts";
 import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
 import { sendMarkdownMail } from "./mail/mail.service.ts";
 import { getContext } from "./context.middleware.ts";
@@ -45,7 +46,8 @@ function main() {
     .service(webhookService)
     .service(mathjsService)
     .service(telnyxVoiceService)
-    .service(oaiFilesService);
+    .service(oaiFilesService)
+    .service(multimediaService);
 
   // Custom: mail zapier webhook (receives emails from Zapier)
   app.expressApp.post(
