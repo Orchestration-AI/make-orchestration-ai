@@ -100,6 +100,12 @@ export type PermissionName =
   | "role_storage_orchestration_writer"
   | "role_storage_workspace_reader"
   | "role_storage_workspace_writer"
+  | "role_ticker_config_reader"
+  | "role_ticker_config_updater"
+  | "role_task_inserter"
+  | "role_task_reader"
+  | "role_task_lister"
+  | "role_task_deleter"
   | "role_admin";
 
 export type Permission = {
