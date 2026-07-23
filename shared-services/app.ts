@@ -35,6 +35,10 @@ const app = createApp()
       justification: "Register and update agent endpoints and links.",
     },
     {
+      permission_name: "role_task_inserter",
+      justification: "Submit ticker tasks to other agents for async inter-agent messaging.",
+    },
+    {
       permission_name: "role_storage_workspace_writer",
       justification: "Read and write files across all storage scopes on behalf of agents.",
     },

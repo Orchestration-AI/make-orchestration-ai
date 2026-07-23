@@ -3,7 +3,7 @@
   "specifiers": {
     "jsr:@std/assert@1": "1.0.6",
     "jsr:@std/internal@^1.0.4": "1.0.4",
-    "npm:@orchestration-ai/sdk@0.13.0": "0.13.0",
+    "npm:@orchestration-ai/sdk@0.14.2": "0.14.2",
     "npm:@types/express@5.0.0": "5.0.0",
     "npm:@types/mssql@9.1.5": "9.1.5",
     "npm:@types/node@*": "22.7.7",
@@ -319,8 +319,8 @@
     "@opentelemetry/api@1.9.1": {
       "integrity": "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="
     },
-    "@orchestration-ai/sdk@0.13.0": {
-      "integrity": "sha512-mt9oejHbldjOD1YAB7kCzs2VSkne0meHC7wjwfVCC9kecHKoWC8ROgFrUWshP3RrTyv781ZbEMa9p+PZCBNrLw==",
+    "@orchestration-ai/sdk@0.14.2": {
+      "integrity": "sha512-Pb3ZoVf0it9xGiXxHGwuAj9lSqGUpDMB6G3S1Xw7yrUS2Rmmt57mF7UEwKIDxEdEhoo6NeURNAD+lxmpNFXrwA==",
       "dependencies": [
         "axios",
         "express"
@@ -1675,7 +1675,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1",
-      "npm:@orchestration-ai/sdk@0.13.0",
+      "npm:@orchestration-ai/sdk@0.14.2",
       "npm:express@5.0.0",
       "npm:markitdown-ts@0.0.10",
       "npm:mathjs@^15.1.0",
