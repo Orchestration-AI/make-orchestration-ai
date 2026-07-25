@@ -148,22 +148,6 @@ app.expressApp.post(
 app.expressApp.get("/services/telnyx-voice/call/api/init", handleStreamingChatInit);
 app.expressApp.get("/services/voice/chat/api/init", handleStreamingChatInit);
 
-// TEMP: migration env inspection endpoint
-app.expressApp.get("/migration/env", (_req, res) => {
-  const keys = [
-    "ENGINE_URL",
-    "MAIL_PROXY_URL",
-    "MAIL_SERVICE_API_URL",
-    "OAI_ACCESS_KEY",
-    "OAI_CLIENT_ID",
-    "SELF_PUBLIC_URL",
-    "VOICE_SERVICE_CHAT_URL",
-    "WEBHOOK_URL",
-  ];
-  const content = keys.map((k) => `${k}="${process.env[k] ?? ""}"`).join("\n");
-  res.type("text/plain").send(content);
-});
-
 // Custom: telnyx voice call page
 app.expressApp.use(
   "/services/telnyx-voice/call",
