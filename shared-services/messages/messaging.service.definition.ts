@@ -4,8 +4,8 @@ import { endpointCreate } from "@orchestration-ai/sdk/sdk.gen";
 import { defaultSettings } from "./messaging.constants.ts";
 import { getDescriptionForContext } from "./messaging.description.ts";
 import {
-  messageLayerAbove,
-  messageLayerBelow,
+  // messageLayerAbove,
+  // messageLayerBelow,
   messageOtherAgent,
 } from "./messaging.service.ts";
 import process from "node:process";
@@ -34,9 +34,9 @@ export const messagingService = defineServiceWithDynamicDescription({
   tools: {
     message_other_agent: (body: { message: string; agentId: string }, context: Context, engineClient: Client, apiClient: Client) =>
       messageOtherAgent(body.message, body.agentId, context, engineClient, apiClient),
-    message_layer_below: (body: { message: string }, context: Context, engineClient: Client) =>
-      messageLayerBelow(body.message, context, engineClient),
-    message_layer_above: (body: { message: string }, context: Context, engineClient: Client) =>
-      messageLayerAbove(body.message, context, engineClient),
+    // message_layer_below: (body: { message: string }, context: Context, engineClient: Client) =>
+    //   messageLayerBelow(body.message, context, engineClient),
+    // message_layer_above: (body: { message: string }, context: Context, engineClient: Client) =>
+    //   messageLayerAbove(body.message, context, engineClient),
   },
 });

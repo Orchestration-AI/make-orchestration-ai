@@ -20,7 +20,7 @@ export const voiceService = defineService({
         link_description:
           "Follow this link to chat to the agent using your voice.",
         link_name: "Chat to agent",
-        link_url: `${process.env.VOICE_SERVICE_CHAT_URL}`,
+        link_url: `${process.env.SELF_PUBLIC_URL}/services/voice/chat`,
       },
     });
   },

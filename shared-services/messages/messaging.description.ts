@@ -2,33 +2,33 @@ import type { Context, ServiceDescription } from "@orchestration-ai/sdk/services
 import type { Client } from "@orchestration-ai/sdk/app-builder";
 
 export function getDescriptionForContext(context: Context, _engineClient: Client, _apiClient: Client): ServiceDescription {
-  const layerBelow = {
-    path: "message_layer_below" as const,
-    method: "POST" as const,
-    description:
-      "Part of OAI Messaging Service. Sends a message to the layer immediately below this layer.",
-    parameters: {
-      message: {
-        type: "string" as const,
-        optional: false,
-        description: "The message to send.",
-      },
-    },
-  };
+  // const layerBelow = {
+  //   path: "message_layer_below" as const,
+  //   method: "POST" as const,
+  //   description:
+  //     "Part of OAI Messaging Service. Sends a message to the layer immediately below this layer.",
+  //   parameters: {
+  //     message: {
+  //       type: "string" as const,
+  //       optional: false,
+  //       description: "The message to send.",
+  //     },
+  //   },
+  // };
 
-  const layerAbove = {
-    path: "message_layer_above" as const,
-    method: "POST" as const,
-    description:
-      "Part of OAI Messaging Service. Sends a message to the layer immediately above this layer.",
-    parameters: {
-      message: {
-        type: "string" as const,
-        optional: false,
-        description: "The message to send.",
-      },
-    },
-  };
+  // const layerAbove = {
+  //   path: "message_layer_above" as const,
+  //   method: "POST" as const,
+  //   description:
+  //     "Part of OAI Messaging Service. Sends a message to the layer immediately above this layer.",
+  //   parameters: {
+  //     message: {
+  //       type: "string" as const,
+  //       optional: false,
+  //       description: "The message to send.",
+  //     },
+  //   },
+  // };
 
   return [
     {
@@ -50,17 +50,17 @@ export function getDescriptionForContext(context: Context, _engineClient: Client
       },
     },
 
-    ...(context.identity.numberOfLayers === 1
-      ? []
-      : [
-          ...(context.identity.layerIndex === 0
-            ? [layerBelow]
-            : [
-                ...(context.identity.layerIndex ===
-                context.identity.numberOfLayers - 1
-                  ? [layerAbove]
-                  : [layerBelow, layerAbove]),
-              ]),
-        ]),
+    // ...(context.identity.numberOfLayers === 1
+    //   ? []
+    //   : [
+    //       ...(context.identity.layerIndex === 0
+    //         ? [layerBelow]
+    //         : [
+    //             ...(context.identity.layerIndex ===
+    //             context.identity.numberOfLayers - 1
+    //               ? [layerAbove]
+    //               : [layerBelow, layerAbove]),
+    //           ]),
+    //     ]),
   ];
 }

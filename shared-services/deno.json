@@ -5,17 +5,18 @@
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@1",
-    "@orchestration-ai/sdk/app-builder": "npm:@orchestration-ai/sdk@0.10.0/app-builder",
-    "@orchestration-ai/sdk/services": "npm:@orchestration-ai/sdk@0.10.0/services",
-    "@orchestration-ai/sdk/sdk.gen": "npm:@orchestration-ai/sdk@0.10.0/sdk.gen",
-    "@orchestration-ai/sdk/client.gen": "npm:@orchestration-ai/sdk@0.10.0/client.gen",
-    "@orchestration-ai/sdk/oauth-utils": "npm:@orchestration-ai/sdk@0.10.0/oauth-utils",
-    "@orchestration-ai/sdk/streaming": "npm:@orchestration-ai/sdk@0.10.0/streaming",
+    "@orchestration-ai/sdk/app-builder": "npm:@orchestration-ai/sdk@0.14.2/app-builder",
+    "@orchestration-ai/sdk/services": "npm:@orchestration-ai/sdk@0.14.2/services",
+    "@orchestration-ai/sdk/sdk.gen": "npm:@orchestration-ai/sdk@0.14.2/sdk.gen",
+    "@orchestration-ai/sdk/client.gen": "npm:@orchestration-ai/sdk@0.14.2/client.gen",
+    "@orchestration-ai/sdk/oauth-utils": "npm:@orchestration-ai/sdk@0.14.2/oauth-utils",
+    "@orchestration-ai/sdk/streaming": "npm:@orchestration-ai/sdk@0.14.2/streaming",
     "express": "npm:express@5.0.0",
     "mathjs": "npm:mathjs@^15.1.0",
     "mssql": "npm:mssql@^11.0.1",
     "nodemailer": "npm:nodemailer@^6.9.16",
     "showdown": "npm:showdown@^2.1.0",
-    "socket.io": "npm:socket.io@^4.8.1"
+    "socket.io": "npm:socket.io@^4.8.1",
+    "markitdown-ts": "npm:markitdown-ts@0.0.10"
   }
 }

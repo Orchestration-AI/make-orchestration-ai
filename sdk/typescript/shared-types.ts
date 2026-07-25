@@ -92,6 +92,20 @@ export type PermissionName =
   | "role_service_reader"
   | "role_service_lister"
   | "role_day_pass_transaction_lister"
+  | "role_storage_layer_reader"
+  | "role_storage_layer_writer"
+  | "role_storage_agent_reader"
+  | "role_storage_agent_writer"
+  | "role_storage_orchestration_reader"
+  | "role_storage_orchestration_writer"
+  | "role_storage_workspace_reader"
+  | "role_storage_workspace_writer"
+  | "role_ticker_config_reader"
+  | "role_ticker_config_updater"
+  | "role_task_inserter"
+  | "role_task_reader"
+  | "role_task_lister"
+  | "role_task_deleter"
   | "role_admin";
 
 export type Permission = {

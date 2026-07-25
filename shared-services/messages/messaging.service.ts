@@ -1,7 +1,7 @@
 import type { Context, Setting } from "@orchestration-ai/sdk/services";
 import type { Client } from "@orchestration-ai/sdk/app-builder";
 import { sendMessages } from "@orchestration-ai/sdk/services";
-import { settingFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
+import { agentFindById, settingFindByAgent, taskCreate } from "@orchestration-ai/sdk/sdk.gen";
 import { asyncMessagingSettingKey } from "./messaging.constants.ts";
 
 function asyncMessagingEnabled(settings: Setting[]): boolean {
@@ -47,8 +47,20 @@ export async function messageOtherAgent(
   const isAsync = asyncMessagingEnabled(data!.settings! as Setting[]);
 
   if (isAsync) {
-    sendMessages(otherAgentId, 0, [{ message }], context.identity.layerId, engineClient).then((response) => {
-      console.info(`Async response received: ${response}`);
+    const { data: agentData } = await agentFindById({
+      client: apiClient,
+      path: {
+        workspaceId: context.identity.workspaceId,
+        orchestrationId: context.identity.orchestrationId,
+        id: otherAgentId,
+      },
+    });
+    const orchestrationId = agentData?.orchestration?.id ?? context.identity.orchestrationId;
+    const workspaceId = agentData?.orchestration?.workspace?.id ?? context.identity.workspaceId;
+    await taskCreate({
+      client: apiClient,
+      path: { workspaceId, orchestrationId, agentId: otherAgentId },
+      body: { message },
     });
     return "MESSAGE_RECEIVED";
   } else {
