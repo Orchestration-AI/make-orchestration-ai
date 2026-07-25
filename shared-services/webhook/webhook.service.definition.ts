@@ -1,12 +1,14 @@
 import { defineService } from "@orchestration-ai/sdk/app-builder";
 import type { Context, Client } from "@orchestration-ai/sdk/app-builder";
 import { endpointCreate } from "@orchestration-ai/sdk/sdk.gen";
+import { defaultSettings } from "./webhook.constants.ts";
 import process from "node:process";
 
 export const webhookService = defineService({
   unique_name: "webhook",
   service_name: "OAI Webhook",
   service_description: "Allows agents to receive JSON webhook events.",
+  defaultSettings,
   description: [],
   touch: async (context: Context, _engineClient: Client, apiClient: Client) => {
     await endpointCreate({
