@@ -173,3 +173,119 @@ input[type="text"]:focus {
   header h1 { font-size: 1rem; }
   .subtitle { display: none; }
 }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #0f3460;
+  background: #16213e;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  color: #888;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn:hover { color: #e0e0e0; }
+.tab-btn.active { color: #e94560; border-bottom-color: #e94560; }
+
+.tab-panel { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.5rem 1rem; flex: 1; }
+.tab-panel.hidden { display: none; }
+
+/* Jobs */
+.jobs-toolbar { display: flex; align-items: center; gap: 1rem; }
+
+.jobs-section { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #aaa;
+}
+
+.empty-row { color: #555; font-size: 0.85rem; padding: 0.75rem; text-align: center; }
+
+.job-actions { display: flex; gap: 0.4rem; }
+
+.btn.danger { background: #7a1a2e; color: #fff; }
+.btn.danger:hover { background: #a02040; }
+
+.btn.ghost {
+  background: none;
+  border: 1px solid #0f3460;
+  color: #aaa;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+}
+.btn.ghost:hover { border-color: #e94560; color: #e94560; }
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal.hidden { display: none; }
+
+.modal-box {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  padding: 1.25rem;
+  width: min(600px, 95vw);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title { font-weight: 600; font-size: 1rem; }
+
+.output-block { display: flex; flex-direction: column; gap: 0.3rem; overflow: hidden; }
+
+.output-label { font-size: 0.75rem; text-transform: uppercase; color: #888; letter-spacing: 0.05em; }
+
+.output-pre {
+  background: #0d1b2a;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+  color: #c8d8e8;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.modal-warning {
+  font-size: 0.875rem;
+  color: #e0c060;
+  line-height: 1.6;
+  background: #2a1a00;
+  border: 1px solid #5a3a00;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }

@@ -2,7 +2,8 @@ import { getContext } from "../context.middleware.ts";
 import { createApiClient } from "@orchestration-ai/sdk/services";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
 import { authDecryptPasskey, storageDownloadFileAgent, storageUploadFileAgent } from "@orchestration-ai/sdk/sdk.gen";
-import { finalizeJob, kv } from "./oai-sandbox.queue.ts";
+import { finalizeJob, kv, type JobRecord, type SessionRecord } from "./oai-sandbox.queue.ts";
+import { Sandbox } from "@deno/sandbox";
 import { CONFIG_FILE_PATH } from "./oai-sandbox.constants.ts";
 import { getRequiredEnvValue } from "../environment.ts";
 // @deno-types="npm:@types/express@5.0.0"
@@ -131,6 +132,119 @@ export async function handleConfigSave(req: Request, res: Response): Promise<voi
     res.status(200).send("ok");
   } catch (err) {
     console.warn("[oai-sandbox] Config save error:", err);
+    res.status(500).send(`${err}`);
+  }
+}
+
+// GET /services/oai-sandbox/config/api/jobs
+export async function handleJobsList(req: Request, res: Response): Promise<void> {
+  const layerId = req.headers["x-layer-id"] as string;
+  if (!layerId) { res.status(401).send("Missing x-layer-id header"); return; }
+
+  try {
+    const context = await getContext(layerId);
+    const agentId = context.identity.agentId;
+
+    const jobs: { jobId: string; sessionId: string; status: string; enqueuedAt: number; startedAt?: number }[] = [];
+    const iter = kv.list<JobRecord>({ prefix: ["sandbox_job"] });
+    for await (const entry of iter) {
+      const job = entry.value;
+      const sessionEntry = await kv.get<SessionRecord>(["sandbox_session", job.sessionId]);
+      if (sessionEntry.value?.identity.agentId !== agentId) continue;
+      jobs.push({ jobId: entry.key[1] as string, sessionId: job.sessionId, status: job.status, enqueuedAt: job.enqueuedAt, startedAt: job.startedAt });
+    }
+
+    res.json({ jobs });
+  } catch (err) {
+    console.error("[oai-sandbox] handleJobsList error:", err);
+    res.status(500).send(`${err}`);
+  }
+}
+
+// POST /services/oai-sandbox/config/api/jobs/:jobId/cancel
+export async function handleJobCancel(req: Request, res: Response): Promise<void> {
+  const layerId = req.headers["x-layer-id"] as string;
+  if (!layerId) { res.status(401).send("Missing x-layer-id header"); return; }
+
+  try {
+    const context = await getContext(layerId);
+    const { jobId } = req.params;
+
+    const entry = await kv.get<JobRecord>(["sandbox_job", jobId]);
+    if (!entry.value) { res.status(404).send("Job not found"); return; }
+    if (entry.value.status !== "pending") { res.status(400).send("Only pending jobs can be cancelled"); return; }
+
+    const sessionEntry = await kv.get<SessionRecord>(["sandbox_session", entry.value.sessionId]);
+    if (sessionEntry.value?.identity.agentId !== context.identity.agentId) { res.status(403).send("Forbidden"); return; }
+
+    await kv.delete(["sandbox_job", jobId]);
+    console.log(`[oai-sandbox] Job ${jobId} cancelled by user (no ticker sent)`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[oai-sandbox] handleJobCancel error:", err);
+    res.status(500).send(`${err}`);
+  }
+}
+
+// GET /services/oai-sandbox/config/api/jobs/:jobId/output
+export async function handleJobOutput(req: Request, res: Response): Promise<void> {
+  const layerId = req.headers["x-layer-id"] as string;
+  if (!layerId) { res.status(401).send("Missing x-layer-id header"); return; }
+
+  try {
+    const context = await getContext(layerId);
+    const { jobId } = req.params;
+
+    const entry = await kv.get<JobRecord>(["sandbox_job", jobId]);
+    if (!entry.value) { res.status(404).send("Job not found"); return; }
+    if (entry.value.status !== "running") { res.status(400).send("Job is not running"); return; }
+    if (!entry.value.sandboxId) { res.status(400).send("No sandbox attached yet"); return; }
+
+    const sessionEntry = await kv.get<SessionRecord>(["sandbox_session", entry.value.sessionId]);
+    if (sessionEntry.value?.identity.agentId !== context.identity.agentId) { res.status(403).send("Forbidden"); return; }
+
+    const sandbox = await Sandbox.connect(entry.value.sandboxId);
+    const [stdout, stderr] = await Promise.all([
+      sandbox.sh`cat /proc/1/fd/1 2>/dev/null || journalctl -n 200 --no-pager 2>/dev/null || echo "(no output)"`.noThrow().text(),
+      sandbox.sh`cat /proc/1/fd/2 2>/dev/null || echo "(no stderr)"`.noThrow().text(),
+    ]);
+    await sandbox.close();
+
+    res.json({ stdout, stderr });
+  } catch (err) {
+    console.error("[oai-sandbox] handleJobOutput error:", err);
+    res.status(500).send(`${err}`);
+  }
+}
+
+// POST /services/oai-sandbox/config/api/jobs/:jobId/stop
+export async function handleJobStop(req: Request, res: Response): Promise<void> {
+  const layerId = req.headers["x-layer-id"] as string;
+  if (!layerId) { res.status(401).send("Missing x-layer-id header"); return; }
+
+  try {
+    const context = await getContext(layerId);
+    const { jobId } = req.params;
+
+    const entry = await kv.get<JobRecord>(["sandbox_job", jobId]);
+    if (!entry.value) { res.status(404).send("Job not found"); return; }
+    if (entry.value.status !== "running") { res.status(400).send("Job is not running"); return; }
+    if (!entry.value.sandboxId) { res.status(400).send("No sandbox attached yet"); return; }
+
+    const sessionEntry = await kv.get<SessionRecord>(["sandbox_session", entry.value.sessionId]);
+    if (sessionEntry.value?.identity.agentId !== context.identity.agentId) { res.status(403).send("Forbidden"); return; }
+
+    try {
+      const sandbox = await Sandbox.connect(entry.value.sandboxId);
+      await sandbox.kill();
+    } catch (err) {
+      console.warn(`[oai-sandbox] Could not connect to sandbox ${entry.value.sandboxId} during stop (may already be gone):`, err);
+    }
+    await kv.delete(["sandbox_job", jobId]);
+    console.log(`[oai-sandbox] Job ${jobId} force-stopped by user (no ticker sent)`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[oai-sandbox] handleJobStop error:", err);
     res.status(500).send(`${err}`);
   }
 }

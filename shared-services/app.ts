@@ -18,7 +18,7 @@ import { internetService } from "./internet/internet.service.definition.ts";
 import { timeService } from "./time/time.service.definition.ts";
 import { oaiSandboxService } from "./oai-sandbox/oai-sandbox.service.definition.ts";
 import { registerQueueListener } from "./oai-sandbox/oai-sandbox.service.ts";
-import { handleJobDone, handleConfigInit, handleConfigSave } from "./oai-sandbox/oai-sandbox.handlers.ts";
+import { handleJobDone, handleConfigInit, handleConfigSave, handleJobsList, handleJobCancel, handleJobOutput, handleJobStop } from "./oai-sandbox/oai-sandbox.handlers.ts";
 import "./oai-sandbox/oai-sandbox.crons.ts";
 import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
 import { sendMarkdownMail } from "./mail/mail.service.ts";
@@ -204,6 +204,12 @@ app.expressApp.post(
 // OAI Sandbox: env-var config UI init + save
 app.expressApp.get("/services/oai-sandbox/config/api/init", handleConfigInit);
 app.expressApp.post("/services/oai-sandbox/config/api/save", handleConfigSave);
+
+// OAI Sandbox: job control APIs
+app.expressApp.get("/services/oai-sandbox/config/api/jobs", handleJobsList);
+app.expressApp.post("/services/oai-sandbox/config/api/jobs/:jobId/cancel", handleJobCancel);
+app.expressApp.get("/services/oai-sandbox/config/api/jobs/:jobId/output", handleJobOutput);
+app.expressApp.post("/services/oai-sandbox/config/api/jobs/:jobId/stop", handleJobStop);
 
 // OAI Sandbox: serve config UI static files
 app.expressApp.use(

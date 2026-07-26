@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OAI Sandbox - Env Config</title>
+    <title>OAI Sandbox</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="main.js" defer></script>
   </head>
@@ -11,34 +11,96 @@
     <div class="config-container">
       <header>
         <h1>OAI Sandbox</h1>
-        <span class="subtitle">Environment Variable Configuration</span>
+        <span class="subtitle" id="header-subtitle">Configuration</span>
       </header>
 
-      <main>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="env">Env Variables</button>
+        <button class="tab-btn" data-tab="jobs">Jobs</button>
+      </nav>
+
+      <!-- Env Variables Tab -->
+      <main id="tab-env" class="tab-panel">
         <p class="hint">
           These key-value pairs will be injected as environment variables into the VM before each job runs.
         </p>
-
         <div class="table-wrapper">
           <table id="env-table">
             <thead>
-              <tr>
-                <th>Key</th>
-                <th>Value</th>
-                <th></th>
-              </tr>
+              <tr><th>Key</th><th>Value</th><th></th></tr>
             </thead>
             <tbody id="env-body"></tbody>
           </table>
         </div>
-
         <div class="actions">
           <button id="add-btn" class="btn secondary">+ Add Variable</button>
           <button id="save-btn" class="btn primary">Save</button>
         </div>
-
         <p id="status-msg" class="status"></p>
       </main>
+
+      <!-- Jobs Tab -->
+      <main id="tab-jobs" class="tab-panel hidden">
+        <div class="jobs-toolbar">
+          <button id="refresh-btn" class="btn secondary">↻ Refresh</button>
+          <p id="jobs-status" class="status"></p>
+        </div>
+
+        <section class="jobs-section">
+          <h2 class="section-title">Pending</h2>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Job ID</th><th>Session</th><th>Queued</th><th></th></tr></thead>
+              <tbody id="pending-body"><tr><td colspan="4" class="empty-row">No pending jobs</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="jobs-section">
+          <h2 class="section-title">Running</h2>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Job ID</th><th>Session</th><th>Started</th><th></th></tr></thead>
+              <tbody id="running-body"><tr><td colspan="4" class="empty-row">No running jobs</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Output modal -->
+    <div id="output-modal" class="modal hidden">
+      <div class="modal-box">
+        <div class="modal-header">
+          <span class="modal-title">Job Output</span>
+          <button id="modal-close" class="remove-btn">✕</button>
+        </div>
+        <div class="output-block">
+          <div class="output-label">stdout</div>
+          <pre id="output-stdout" class="output-pre"></pre>
+        </div>
+        <div class="output-block">
+          <div class="output-label">stderr</div>
+          <pre id="output-stderr" class="output-pre"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stop confirmation modal -->
+    <div id="stop-modal" class="modal hidden">
+      <div class="modal-box">
+        <div class="modal-header">
+          <span class="modal-title">Stop Job</span>
+          <button id="stop-modal-close" class="remove-btn">✕</button>
+        </div>
+        <p class="modal-warning">
+          ⚠️ This will forcibly kill the sandbox VM. <strong>The agent will NOT be notified</strong> — it will not receive a completion ticker. You will need to manually inform the agent that the job was stopped.
+        </p>
+        <div class="modal-actions">
+          <button id="stop-modal-cancel" class="btn secondary">Cancel</button>
+          <button id="stop-modal-confirm" class="btn danger">Stop Job</button>
+        </div>
+      </div>
     </div>
   </body>
 </html>
