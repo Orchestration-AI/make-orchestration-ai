@@ -115,6 +115,7 @@ export type Permission = {
 
 export type Context = {
   identity: AgentIdentity;
+  sessionId?: string;
 };
 
 export type Message = {

@@ -513,6 +513,8 @@ export function createApp(config?: AppConfig): OaiApp {
       });
       const layerId = decrypted?.data as string;
       const context = await getContext(layerId, engineClient);
+      const sessionId = req.get("X-Session-Id");
+      if (sessionId) context.sessionId = sessionId;
       res.locals.context = context;
       res.locals.engineClient = engineClient;
       setupClientCredentials(apiClient, {
