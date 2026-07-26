@@ -44,7 +44,7 @@ export async function createSession(body: CreateSessionBody, context: Context, _
   if (mount) {
     console.log(`[oai-sandbox] Creating 16GB volume in region ${SANDBOX_REGION} for session ${sessionId}`);
     const volume = await Volume.create({
-      slug: `oai-sandbox-${sessionId}`,
+      slug: `oai-sb-${sessionId.slice(0, 8)}`,
       region: SANDBOX_REGION,
       capacity: "16GB",
     });
