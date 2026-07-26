@@ -1,7 +1,7 @@
 import { createApiClient } from "@orchestration-ai/sdk/services";
 import { taskCreate, storageDownloadFileAgent, settingFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
-import { downsync, upsync } from "./oai-sandbox.sync.ts";
+import { downsync, upsync, type SandboxReconnectFn } from "./oai-sandbox.sync.ts";
 import { CONFIG_FILE_PATH, SANDBOX_REGION } from "./oai-sandbox.constants.ts";
 import process from "node:process";
 
@@ -194,6 +194,21 @@ export async function pollAndProcessJobs(): Promise<void> {
   console.log(`[oai-sandbox] Poll complete: ${dispatched} job(s) dispatched`);
 }
 
+function sanitizeCommand(command: string): string {
+  let s = command.trim();
+  const quotes = ["'", '"', "`"];
+  // Strip fully wrapped quotes
+  if (quotes.some((q) => s.startsWith(q) && s.endsWith(q) && s.length >= 2)) {
+    s = s.slice(1, -1).trim();
+  } else {
+    // Strip lone leading or trailing quote
+    if (quotes.some((q) => s.startsWith(q))) s = s.slice(1);
+    if (quotes.some((q) => s.endsWith(q))) s = s.slice(0, -1);
+    s = s.trim();
+  }
+  return s;
+}
+
 async function processJob(jobId: string, sessionId: string, command: string): Promise<void> {
   console.log(`[oai-sandbox] Processing job ${jobId} for session ${sessionId}`);
 
@@ -236,31 +251,45 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
 
   await kv.set(["sandbox_job", jobId], { sessionId, sandboxId: sandbox.id, status: "running", enqueuedAt: Date.now(), startedAt: Date.now() } satisfies JobRecord);
 
+  const sandboxId = sandbox.id;
+  const makeReconnect = (): SandboxReconnectFn => async () => {
+    const sandboxes = await new SandboxClient().sandboxes.list();
+    const meta = sandboxes.find((s) => s.id === sandboxId);
+    if (!meta || meta.status === "stopped") throw new Error(`Sandbox ${sandboxId} has been killed`);
+    console.log(`[oai-sandbox] Reconnecting to sandbox ${sandboxId} for job ${jobId}`);
+    return await Sandbox.connect(sandboxId, {}) as never;
+  };
+
+  const reconnect = makeReconnect();
+
   try {
     if (session.mount) {
       console.log(`[oai-sandbox] Starting downsync for job ${jobId}`);
-      await downsync(sessionId, session.mount, sandbox, { identity: session.identity } as never, apiClient);
+      await downsync(sessionId, session.mount, sandbox, { identity: session.identity } as never, apiClient, reconnect);
       console.log(`[oai-sandbox] Downsync complete for job ${jobId}`);
     }
 
-    console.log(`[oai-sandbox] Executing command for job ${jobId} in sandbox ${sandbox.id}`);
-    const result = await sandbox.sh`${command}`.stdout("piped").stderr("piped").result();
-    const exitCode = result.status.code ?? 0;
-    const stdout = result.stdoutText ?? "";
-    const stderr = result.stderrText ?? "";
+    console.log(`[oai-sandbox] Executing command for job ${jobId} in sandbox ${sandbox.id}: ${command}`);
+    const sanitized = sanitizeCommand(command);
+    if (sanitized !== command) console.log(`[oai-sandbox] Command sanitized for job ${jobId}: ${sanitized}`);
+    // Pass command as a raw template literal string (not a substitution) to avoid escapeShellArg wrapping it in quotes
+    const result = await sandbox.sh(Object.assign([sanitized], { raw: [sanitized] })).stdout("piped").stderr("piped").text();
+    const exitCode = 0;
+    const stdout = result;
+    const stderr = "";
     console.log(`[oai-sandbox] Command finished for job ${jobId} (exit code: ${exitCode})`);
     if (stdout) console.log(`[oai-sandbox] stdout for job ${jobId}:
 ${stdout}`);
     if (stderr) console.warn(`[oai-sandbox] stderr for job ${jobId}:
 ${stderr}`);
 
-    await finalizeJob(jobId, sessionId, exitCode, stdout, stderr, sandbox, apiClient);
+    await finalizeJob(jobId, sessionId, exitCode, stdout, stderr, sandbox, apiClient, reconnect);
 
   } catch (err) {
-    console.error(`[oai-sandbox] Job ${jobId} execution error:`, err);
+    console.warn(`[oai-sandbox] Job ${jobId} execution error:`, err);
     const exitCode = (err as { code?: number }).code ?? 1;
     const stderr = String(err);
-    await finalizeJob(jobId, sessionId, exitCode, "", stderr, sandbox, apiClient);
+    await finalizeJob(jobId, sessionId, exitCode, "", stderr, sandbox, apiClient, reconnect);
   }
 }
 
@@ -272,6 +301,7 @@ export async function finalizeJob(
   stderr: string,
   sandbox: InstanceType<typeof Sandbox>,
   apiClient: ReturnType<typeof makeApiClient>,
+  reconnect?: SandboxReconnectFn,
 ): Promise<void> {
   console.log(`[oai-sandbox] Finalizing job ${jobId} for session ${sessionId} (exit code: ${exitCode})`);
 
@@ -285,7 +315,7 @@ export async function finalizeJob(
   if (session.mount) {
     console.log(`[oai-sandbox] Starting upsync for job ${jobId}`);
     try {
-      await upsync(sessionId, session.mount, sandbox, { identity: session.identity } as never, apiClient);
+      await upsync(sessionId, session.mount, sandbox, { identity: session.identity } as never, apiClient, reconnect);
       console.log(`[oai-sandbox] Upsync complete for job ${jobId}`);
     } catch (err) {
       console.warn(`[oai-sandbox] Upsync failed for job ${jobId}:`, err);

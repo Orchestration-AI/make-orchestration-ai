@@ -7,6 +7,7 @@ interface SandboxCommandBuilder {
   text(): Promise<string>;
 }
 interface SandboxLike {
+  readonly closed: Promise<void>;
   sh(strings: TemplateStringsArray, ...values: unknown[]): SandboxCommandBuilder;
   fs: {
     mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
@@ -16,6 +17,16 @@ interface SandboxLike {
     stat(path: string): Promise<{ mtime: Date | null }>;
   };
 }
+
+// Returns a fresh sandbox connection, or throws if the sandbox has been killed.
+// Sentinel used to detect if `closed` has already resolved.
+const ALREADY_CLOSED = Symbol("already_closed");
+async function isDisconnected(sandbox: SandboxLike): Promise<boolean> {
+  const result = await Promise.race([sandbox.closed.then(() => ALREADY_CLOSED), Promise.resolve(null)]);
+  return result === ALREADY_CLOSED;
+}
+
+export type SandboxReconnectFn = () => Promise<SandboxLike>;
 import {
   storageListDirAgent, storageListDirOrch, storageListDirWorkspace,
   storageFileMetadataAgent, storageFileMetadataOrch, storageFileMetadataWorkspace,
@@ -137,7 +148,7 @@ async function collectRemoteFiles(scope: MountScope, dirPath: string, context: C
   return files;
 }
 
-export async function downsync(sessionId: string, mount: MountConfig, sandbox: SandboxLike, context: Context, apiClient: Client): Promise<void> {
+export async function downsync(sessionId: string, mount: MountConfig, sandbox: SandboxLike, context: Context, apiClient: Client, reconnect?: SandboxReconnectFn): Promise<void> {
   console.log(`[oai-sandbox:sync] Downsync started for session ${sessionId}: ${mount.scope}:${mount.remote_path} → VM:${mount.local_path}`);
 
   const remoteFiles = await collectRemoteFiles(mount.scope, mount.remote_path, context, apiClient);
@@ -147,6 +158,10 @@ export async function downsync(sessionId: string, mount: MountConfig, sandbox: S
   let skipped = 0;
 
   for (const remoteFile of remoteFiles) {
+    if (reconnect && await isDisconnected(sandbox)) {
+      console.log(`[oai-sandbox:sync] Connection lost during downsync, reconnecting...`);
+      sandbox = await reconnect();
+    }
     const meta = await getMetadata(mount.scope, remoteFile, context, apiClient);
     const remoteLastModified = meta?.updated_at ?? "";
 
@@ -194,7 +209,7 @@ export async function downsync(sessionId: string, mount: MountConfig, sandbox: S
   console.log(`[oai-sandbox:sync] Downsync complete for session ${sessionId}: ${synced} synced, ${skipped} skipped (up to date)`);
 }
 
-export async function upsync(sessionId: string, mount: MountConfig, sandbox: SandboxLike, context: Context, apiClient: Client): Promise<void> {
+export async function upsync(sessionId: string, mount: MountConfig, sandbox: SandboxLike, context: Context, apiClient: Client, reconnect?: SandboxReconnectFn): Promise<void> {
   console.log(`[oai-sandbox:sync] Upsync started for session ${sessionId}: VM:${mount.local_path} → ${mount.scope}:${mount.remote_path}`);
 
   try {
@@ -217,6 +232,10 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
         continue;
       }
 
+      if (reconnect && await isDisconnected(sandbox)) {
+        console.log(`[oai-sandbox:sync] Connection lost during upsync, reconnecting...`);
+        sandbox = await reconnect();
+      }
       const stat = await sandbox.fs.stat(vmPath);
       const localMtime = stat.mtime?.toISOString() ?? "";
 

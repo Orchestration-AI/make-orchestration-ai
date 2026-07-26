@@ -19,5 +19,21 @@
     "socket.io": "npm:socket.io@^4.8.1",
     "markitdown-ts": "npm:markitdown-ts@0.0.10",
     "@deno/sandbox": "npm:@deno/sandbox"
+  },
+  "deploy": {
+    "org": "orchestration-ai"
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
