@@ -244,7 +244,7 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
     }
 
     console.log(`[oai-sandbox] Executing command for job ${jobId} in sandbox ${sandbox.id}`);
-    const result = await sandbox.sh`${command}`.sudo(true).stdout("piped").stderr("piped").result();
+    const result = await sandbox.sh`${command}`.stdout("piped").stderr("piped").result();
     const exitCode = result.status.code ?? 0;
     const stdout = result.stdoutText ?? "";
     const stderr = result.stderrText ?? "";
@@ -258,10 +258,9 @@ ${stderr}`);
 
   } catch (err) {
     console.error(`[oai-sandbox] Job ${jobId} execution error:`, err);
-    try { await sandbox.kill(); } catch { /* ignore */ }
-    await decrementSemaphore();
-    await kv.delete(["sandbox_job", jobId]);
-    await sendTickerTask(session, `OAI Sandbox: Job ${jobId} failed during execution: ${err}`);
+    const exitCode = (err as { code?: number }).code ?? 1;
+    const stderr = String(err);
+    await finalizeJob(jobId, sessionId, exitCode, "", stderr, sandbox, apiClient);
   }
 }
 
