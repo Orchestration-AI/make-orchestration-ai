@@ -63,7 +63,7 @@ export async function createSession(body: CreateSessionBody, context: Context, _
     mount: mount,
     volumeId,
     lastJobAt: Date.now(),
-    agentSessionId: (context as unknown as { sessionId?: string }).sessionId,
+    agentSessionId: context.sessionId,
   };
 
   await kv.set(["sandbox_session", sessionId], record);
@@ -71,11 +71,16 @@ export async function createSession(body: CreateSessionBody, context: Context, _
   return { session_id: sessionId };
 }
 
-export async function runCommand(body: RunCommandBody, _context: Context, _e: Client, _apiClient: Client) {
+export async function runCommand(body: RunCommandBody, context: Context, _e: Client, _apiClient: Client) {
   console.log(`[oai-sandbox] runCommand called for session ${body.session_id}`);
 
   const sessionEntry = await kv.get<SessionRecord>(["sandbox_session", body.session_id]);
   if (!sessionEntry.value) throw new Error(`Session ${body.session_id} not found.`);
+
+  const currentAgentSessionId = context.sessionId;
+  if (currentAgentSessionId && currentAgentSessionId !== sessionEntry.value.agentSessionId) {
+    await kv.set(["sandbox_session", body.session_id], { ...sessionEntry.value, agentSessionId: currentAgentSessionId } satisfies SessionRecord);
+  }
 
   const jobId = crypto.randomUUID();
   const jobRecord: JobRecord = {

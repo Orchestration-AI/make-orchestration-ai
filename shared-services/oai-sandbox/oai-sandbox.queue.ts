@@ -5,7 +5,7 @@ import { downsync, upsync } from "./oai-sandbox.sync.ts";
 import { CONFIG_FILE_PATH, SANDBOX_REGION } from "./oai-sandbox.constants.ts";
 import process from "node:process";
 
-import { Sandbox, type SandboxOptions } from "@deno/sandbox";
+import { Sandbox, Client as SandboxClient, type SandboxOptions } from "@deno/sandbox";
 import type { MountConfig } from "./oai-sandbox.sync.ts";
 
 export type JobRecord = {
@@ -137,7 +137,7 @@ async function loadEnvVars(identity: SessionRecord["identity"]): Promise<Record<
 }
 
 async function sendTickerTask(session: SessionRecord, message: string): Promise<void> {
-  console.log(`[oai-sandbox] Sending ticker task to agent ${session.identity.agentId}`);
+  console.log(`[oai-sandbox] Sending ticker task to agent ${session.identity.agentId} (session: ${session.agentSessionId ?? "none"})`);
   const apiClient = makeApiClient(session.identity);
   await taskCreate({
     client: apiClient,
@@ -154,6 +154,13 @@ async function sendTickerTask(session: SessionRecord, message: string): Promise<
   console.log(`[oai-sandbox] Ticker task sent to agent ${session.identity.agentId}`);
 }
 
+const SANDBOX_HARD_LIMIT = 5;
+
+async function getRunningCount(): Promise<number> {
+  const sandboxes = await new SandboxClient().sandboxes.list();
+  return sandboxes.filter((s) => s.status === "running").length;
+}
+
 export async function pollAndProcessJobs(): Promise<void> {
   console.log("[oai-sandbox] Polling for pending jobs");
   let dispatched = 0;
@@ -162,6 +169,11 @@ export async function pollAndProcessJobs(): Promise<void> {
     const job = entry.value;
     if (job.status !== "pending") continue;
     const jobId = entry.key[1] as string;
+    const running = await getRunningCount();
+    if (running >= SANDBOX_HARD_LIMIT) {
+      console.log(`[oai-sandbox] Sandbox limit reached (${running}/${SANDBOX_HARD_LIMIT} running), skipping remaining pending jobs`);
+      break;
+    }
     const count = await getSemaphore();
     if (count >= MAX_CONCURRENT) {
       console.log(`[oai-sandbox] Concurrency limit reached (${count}/${MAX_CONCURRENT}), skipping remaining pending jobs`);
@@ -192,12 +204,13 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
     return;
   }
   const session = sessionEntry.value;
-
   await incrementSemaphore();
 
   let sandbox: InstanceType<typeof Sandbox> | undefined;
+  let apiClient: ReturnType<typeof makeApiClient> | undefined;
+
   try {
-    const apiClient = makeApiClient(session.identity);
+    apiClient = makeApiClient(session.identity);
     const envVars = await loadEnvVars(session.identity);
 
     const sandboxOptions: SandboxOptions = {
@@ -213,9 +226,17 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
     console.log(`[oai-sandbox] Creating sandbox for job ${jobId} in region ${SANDBOX_REGION} with timeout ${SANDBOX_TIMEOUT_SECS}`);
     sandbox = await Sandbox.create(sandboxOptions);
     console.log(`[oai-sandbox] Sandbox ${sandbox.id} created for job ${jobId}`);
+  } catch (err) {
+    console.error(`[oai-sandbox] Failed to create sandbox for job ${jobId}:`, err);
+    await decrementSemaphore();
+    await kv.delete(["sandbox_job", jobId]);
+    await sendTickerTask(session, `OAI Sandbox: Job ${jobId} failed to start (sandbox creation error): ${err}`);
+    return;
+  }
 
-    await kv.set(["sandbox_job", jobId], { sessionId, sandboxId: sandbox.id, status: "running", enqueuedAt: Date.now(), startedAt: Date.now() } satisfies JobRecord);
+  await kv.set(["sandbox_job", jobId], { sessionId, sandboxId: sandbox.id, status: "running", enqueuedAt: Date.now(), startedAt: Date.now() } satisfies JobRecord);
 
+  try {
     if (session.mount) {
       console.log(`[oai-sandbox] Starting downsync for job ${jobId}`);
       await downsync(sessionId, session.mount, sandbox, { identity: session.identity } as never, apiClient);
@@ -223,7 +244,7 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
     }
 
     console.log(`[oai-sandbox] Executing command for job ${jobId} in sandbox ${sandbox.id}`);
-    const result = await sandbox.sh`${command}`.sudo().noThrow().result();
+    const result = await sandbox.sh`${command}`.sudo(true).stdout("piped").stderr("piped").result();
     const exitCode = result.status.code ?? 0;
     const stdout = result.stdoutText ?? "";
     const stderr = result.stderrText ?? "";
@@ -236,14 +257,11 @@ ${stderr}`);
     await finalizeJob(jobId, sessionId, exitCode, stdout, stderr, sandbox, apiClient);
 
   } catch (err) {
+    console.error(`[oai-sandbox] Job ${jobId} execution error:`, err);
+    try { await sandbox.kill(); } catch { /* ignore */ }
     await decrementSemaphore();
-    console.error(`[oai-sandbox] Job ${jobId} failed:`, err);
-    if (sandbox) { try { await sandbox.kill(); } catch { /* ignore */ } }
-    const session2 = (await kv.get<SessionRecord>(["sandbox_session", sessionId])).value;
-    if (session2) {
-      await sendTickerTask(session2, `OAI Sandbox: Job ${jobId} failed. Error: ${err}`);
-    }
     await kv.delete(["sandbox_job", jobId]);
+    await sendTickerTask(session, `OAI Sandbox: Job ${jobId} failed during execution: ${err}`);
   }
 }
 
