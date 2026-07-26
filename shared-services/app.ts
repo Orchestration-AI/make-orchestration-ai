@@ -15,6 +15,7 @@ import { telnyxVoiceService } from "./telnyx-voice/telnyx-voice.service.definiti
 import { oaiFilesService } from "./oai-files/oai-files.service.definition.ts";
 import { multimediaService } from "./multimedia/multimedia.service.definition.ts";
 import { internetService } from "./internet/internet.service.definition.ts";
+import { timeService } from "./time/time.service.definition.ts";
 import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
 import { sendMarkdownMail } from "./mail/mail.service.ts";
 import { getContext } from "./context.middleware.ts";
@@ -53,7 +54,8 @@ const app = createApp()
   .service(telnyxVoiceService)
   .service(oaiFilesService)
   .service(multimediaService)
-  .service(internetService);
+  .service(internetService)
+  .service(timeService);
 
 // Custom: mail zapier webhook (receives emails from Zapier)
 app.expressApp.post(
