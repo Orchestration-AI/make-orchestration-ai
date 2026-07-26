@@ -6,7 +6,7 @@ import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
 import process from "node:process";
 import { Sandbox, Client as SandboxClient } from "@deno/sandbox";
 
-const SESSION_TTL_MS = parseInt(Deno.env.get("SESSION_TTL_HOURS") ?? "24") * 3_600_000;
+const SESSION_TTL_MS = parseInt(process.env.SESSION_TTL_HOURS ?? "24") * 3_600_000;
 const SANDBOX_TIMEOUT_MS = 30 * 60_000;
 
 function makeApiClient(identity: SessionRecord["identity"]) {

@@ -2,7 +2,12 @@ import type { Context } from "@orchestration-ai/sdk/services";
 import type { Client } from "@orchestration-ai/sdk/app-builder";
 
 // Use a structural interface to avoid npm vs JSR Sandbox type identity mismatch
+interface SandboxCommandBuilder {
+  noThrow(): SandboxCommandBuilder;
+  text(): Promise<string>;
+}
 interface SandboxLike {
+  sh(strings: TemplateStringsArray, ...values: unknown[]): SandboxCommandBuilder;
   fs: {
     mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
     writeFile(path: string, data: Uint8Array<ArrayBuffer> | ReadableStream<Uint8Array>): Promise<void>;
@@ -29,7 +34,7 @@ export type MountConfig = {
 type StorageEntry = { name: string; type: "file" | "directory" };
 type StorageListResponse = { entries?: StorageEntry[]; total?: number };
 
-type SyncState = { lastModified: string };
+type SyncState = { lastModified: string; mode?: string };
 
 const kv = await Deno.openKv();
 
@@ -174,9 +179,15 @@ export async function downsync(sessionId: string, mount: MountConfig, sandbox: S
     await sandbox.fs.mkdir(parentDir, { recursive: true });
     const bytes = new Uint8Array(await res.arrayBuffer());
     await sandbox.fs.writeFile(vmPath, bytes);
+
+    const storedMode = cached.value?.mode;
+    if (storedMode) {
+      await sandbox.sh`chmod ${storedMode} ${vmPath}`.noThrow().text();
+      console.log(`[oai-sandbox:sync] Restored mode ${storedMode} on VM:${vmPath}`);
+    }
     console.log(`[oai-sandbox:sync] Downsynced ${remoteFile} → VM:${vmPath} (${bytes.length} bytes)`);
 
-    await kv.set(syncKey, { lastModified: remoteLastModified } satisfies SyncState);
+    await kv.set(syncKey, { lastModified: remoteLastModified, mode: storedMode } satisfies SyncState);
     synced++;
   }
 
@@ -217,6 +228,9 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
         continue;
       }
 
+      const modeRaw = await sandbox.sh`stat -c '%a' ${vmPath}`.noThrow().text();
+      const mode = modeRaw.trim() || undefined;
+
       const contentType = inferContentType(vmPath);
       const uploadData = await getUploadUrl(mount.scope, remotePath, contentType, context, apiClient);
       if (!uploadData?.upload_url) {
@@ -239,7 +253,7 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
       }
 
       console.log(`[oai-sandbox:sync] Upsynced VM:${vmPath} → ${remotePath} (${bytes.length} bytes)`);
-      await kv.set(syncKey, { lastModified: localMtime } satisfies SyncState);
+      await kv.set(syncKey, { lastModified: localMtime, mode } satisfies SyncState);
       synced++;
     }
   }

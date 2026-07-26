@@ -2,12 +2,14 @@ import { getContext } from "../context.middleware.ts";
 import { createApiClient } from "@orchestration-ai/sdk/services";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
 import { authDecryptPasskey, storageDownloadFileAgent, storageUploadFileAgent } from "@orchestration-ai/sdk/sdk.gen";
-import { finalizeJob, kv, type JobRecord, type SessionRecord } from "./oai-sandbox.queue.ts";
+import { finalizeJob, kv, decrementSemaphore, type JobRecord, type SessionRecord } from "./oai-sandbox.queue.ts";
 import { Sandbox } from "@deno/sandbox";
 import { CONFIG_FILE_PATH } from "./oai-sandbox.constants.ts";
 import { getRequiredEnvValue } from "../environment.ts";
 // @deno-types="npm:@types/express@5.0.0"
 import type { Request, Response } from "express";
+
+import process from "node:process";
 
 function makeApiClient(workspaceOwnerId: string) {
   const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
@@ -241,10 +243,24 @@ export async function handleJobStop(req: Request, res: Response): Promise<void> 
       console.warn(`[oai-sandbox] Could not connect to sandbox ${entry.value.sandboxId} during stop (may already be gone):`, err);
     }
     await kv.delete(["sandbox_job", jobId]);
+    await decrementSemaphore();
     console.log(`[oai-sandbox] Job ${jobId} force-stopped by user (no ticker sent)`);
     res.json({ success: true });
   } catch (err) {
     console.error("[oai-sandbox] handleJobStop error:", err);
     res.status(500).send(`${err}`);
   }
+}
+
+// POST /services/oai-sandbox/internal/reset-counter
+export async function handleResetCounter(req: Request, res: Response): Promise<void> {
+  const adminKey = process.env.SANDBOX_ADMIN_KEY;
+  if (!adminKey) { res.status(503).send("SANDBOX_ADMIN_KEY not configured"); return; }
+  if (req.headers["x-admin-key"] !== adminKey) { res.status(401).send("Unauthorized"); return; }
+
+  const entry = await kv.get<number>(["sandbox_running_count"]);
+  const previous = entry.value ?? 0;
+  await kv.set(["sandbox_running_count"], 0);
+  console.warn(`[oai-sandbox] Concurrency counter manually reset from ${previous} to 0`);
+  res.json({ previous, current: 0 });
 }

@@ -33,7 +33,7 @@ export type SessionRecord = {
 
 const kv = await Deno.openKv();
 
-const MAX_CONCURRENT = parseInt(Deno.env.get("SANDBOX_MAX_CONCURRENT") ?? "2");
+const MAX_CONCURRENT = parseInt(process.env.SANDBOX_MAX_CONCURRENT ?? "2");
 const SANDBOX_TIMEOUT_SECS = "30m" as const;
 
 function makeApiClient(identity: SessionRecord["identity"]) {
@@ -67,7 +67,7 @@ async function incrementSemaphore(): Promise<void> {
   }
 }
 
-async function decrementSemaphore(): Promise<void> {
+export async function decrementSemaphore(): Promise<void> {
   while (true) {
     const entry = await kv.get<number>(["sandbox_running_count"]);
     const current = entry.value ?? 0;
@@ -200,7 +200,7 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
 
     const envVars = await loadEnvVars(session.identity);
 
-    const webhookUrl = `${Deno.env.get("SERVICE_BASE_URL") ?? ""}/services/oai-sandbox/api/job-done/${session.layerId}/${jobId}`;
+    const webhookUrl = `${process.env.SELF_PUBLIC_URL ?? ""}/services/oai-sandbox/api/job-done/${session.layerId}/${jobId}`;
     const injectedCommand = `(${command}); _EC=$?; curl -sf -X POST '${webhookUrl}' -H 'Content-Type: application/json' -d "{\\\"exit_code\\\":$_EC}" || true; exit $_EC`;
 
     const sandboxOptions: SandboxOptions = {
