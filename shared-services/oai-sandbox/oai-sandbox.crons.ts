@@ -36,7 +36,7 @@ async function destroySession(sessionId: string, session: SessionRecord): Promis
   console.log(`[oai-sandbox:cron] Session ${sessionId} destroyed`);
 }
 
-// Cron 1: Session TTL — runs every hour
+// Cron 1: Session TTL - runs every hour
 Deno.cron("oai-sandbox-session-cleanup", "0 * * * *", async () => {
   console.log("[oai-sandbox:cron] Session TTL cleanup started");
   const now = Date.now();
@@ -59,12 +59,12 @@ Deno.cron("oai-sandbox-session-cleanup", "0 * * * *", async () => {
   console.log(`[oai-sandbox:cron] Session TTL cleanup complete: ${checked} checked, ${cleaned} cleaned`);
 });
 
-// Cron 3: Job poll — runs every minute
+// Cron 3: Job poll - runs every minute
 Deno.cron("oai-sandbox-job-poll", "* * * * *", async () => {
   await pollAndProcessJobs();
 });
 
-// Cron 2: Orphan detection — runs every 30 minutes
+// Cron 2: Orphan detection - runs every 30 minutes
 Deno.cron("oai-sandbox-orphan-check", "*/30 * * * *", async () => {
   console.log("[oai-sandbox:cron] Orphan detection started");
   const now = Date.now();
@@ -88,7 +88,7 @@ Deno.cron("oai-sandbox-orphan-check", "*/30 * * * *", async () => {
 
     const sessionEntry = await kv.get<SessionRecord>(["sandbox_session", job.sessionId]);
     if (!sessionEntry.value) {
-      console.warn(`[oai-sandbox:cron] Session ${job.sessionId} not found for orphaned job ${jobId} — deleting job record`);
+      console.warn(`[oai-sandbox:cron] Session ${job.sessionId} not found for orphaned job ${jobId} - deleting job record`);
       await kv.delete(entry.key);
       continue;
     }
@@ -117,7 +117,7 @@ Deno.cron("oai-sandbox-orphan-check", "*/30 * * * *", async () => {
         console.warn(`[oai-sandbox:cron] Failed to kill orphaned sandbox ${job.sandboxId} for job ${jobId}:`, err);
       }
     } else {
-      console.warn(`[oai-sandbox:cron] No sandboxId for orphaned job ${jobId} — cannot kill VM`);
+      console.warn(`[oai-sandbox:cron] No sandboxId for orphaned job ${jobId} - cannot kill VM`);
     }
 
     try {

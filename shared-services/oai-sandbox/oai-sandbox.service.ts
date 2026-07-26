@@ -29,11 +29,11 @@ export async function createSession(body: CreateSessionBody, context: Context, _
   if (mount) {
     const settings = await loadSettings(context, apiClient);
     if (mount.scope === "workspace" && !boolSetting(settings, SANDBOX_WORKSPACE_MOUNT_KEY)) {
-      console.warn(`[oai-sandbox] Workspace mount denied for agent ${context.identity.agentId} — setting not enabled`);
+      console.warn(`[oai-sandbox] Workspace mount denied for agent ${context.identity.agentId} - setting not enabled`);
       throw new Error("Workspace-scoped mounts are not enabled for this agent.");
     }
     if (mount.scope === "orchestration" && !boolSetting(settings, SANDBOX_ORCHESTRATION_MOUNT_KEY)) {
-      console.warn(`[oai-sandbox] Orchestration mount denied for agent ${context.identity.agentId} — setting not enabled`);
+      console.warn(`[oai-sandbox] Orchestration mount denied for agent ${context.identity.agentId} - setting not enabled`);
       throw new Error("Orchestration-scoped mounts are not enabled for this agent.");
     }
   }
@@ -115,7 +115,7 @@ export async function endSession(body: EndSessionBody, _context: Context, _e: Cl
   return { success: true };
 }
 
-// Register queue listener — called once at startup from app.ts
+// Register queue listener - called once at startup from app.ts
 export function registerQueueListener(): void {
   console.log("[oai-sandbox] Queue listener skipped (using poll-based processing)");
 }

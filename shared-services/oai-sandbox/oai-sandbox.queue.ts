@@ -125,7 +125,7 @@ async function loadEnvVars(identity: SessionRecord["identity"]): Promise<Record<
       if (key && settingName in settingMap) {
         result[key] = settingMap[settingName];
       } else if (key) {
-        console.warn(`[oai-sandbox] Setting "${settingName}" not found for env var "${key}" on agent ${identity.agentId} — skipping`);
+        console.warn(`[oai-sandbox] Setting "${settingName}" not found for env var "${key}" on agent ${identity.agentId} - skipping`);
       }
     }
     console.log(`[oai-sandbox] Resolved ${Object.keys(result).length}/${pairs.length} env var(s) for agent ${identity.agentId}`);
@@ -187,7 +187,7 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
 
   const sessionEntry = await kv.get<SessionRecord>(["sandbox_session", sessionId]);
   if (!sessionEntry.value) {
-    console.warn(`[oai-sandbox] Session ${sessionId} not found for job ${jobId} — dropping`);
+    console.warn(`[oai-sandbox] Session ${sessionId} not found for job ${jobId} - dropping`);
     await kv.delete(["sandbox_job", jobId]);
     return;
   }
@@ -251,7 +251,7 @@ export async function finalizeJob(
 
   const sessionEntry = await kv.get<SessionRecord>(["sandbox_session", sessionId]);
   if (!sessionEntry.value) {
-    console.warn(`[oai-sandbox] Session ${sessionId} not found during finalization of job ${jobId} — skipping`);
+    console.warn(`[oai-sandbox] Session ${sessionId} not found during finalization of job ${jobId} - skipping`);
     return;
   }
   const session = sessionEntry.value;
@@ -274,7 +274,7 @@ export async function finalizeJob(
       console.warn(`[oai-sandbox] Upsync/kill failed for job ${jobId} (sandbox ${sandboxId}):`, err);
     }
   } else if (sandboxId) {
-    console.log(`[oai-sandbox] No mount configured — killing sandbox ${sandboxId} for job ${jobId}`);
+    console.log(`[oai-sandbox] No mount configured - killing sandbox ${sandboxId} for job ${jobId}`);
     try {
       const sandbox = await Sandbox.connect(sandboxId);
       await sandbox.kill();
@@ -283,7 +283,7 @@ export async function finalizeJob(
       console.warn(`[oai-sandbox] Failed to kill sandbox ${sandboxId} for job ${jobId}:`, err);
     }
   } else {
-    console.warn(`[oai-sandbox] No sandboxId recorded for job ${jobId} — cannot kill VM`);
+    console.warn(`[oai-sandbox] No sandboxId recorded for job ${jobId} - cannot kill VM`);
   }
 
   await kv.set(["sandbox_session", sessionId], { ...session, lastJobAt: Date.now() } satisfies SessionRecord);

@@ -30,7 +30,7 @@ export async function handleJobDone(req: Request, res: Response): Promise<void> 
     const context = await getContext(layerId);
     const jobEntry = await kv.get<{ sessionId: string }>(["sandbox_job", jobId]);
     if (!jobEntry.value) {
-      console.warn(`[oai-sandbox] Job ${jobId} not found in KV — may have already been finalized`);
+      console.warn(`[oai-sandbox] Job ${jobId} not found in KV - may have already been finalized`);
       res.status(404).send("Job not found");
       return;
     }
@@ -82,7 +82,7 @@ export async function handleConfigInit(req: Request, res: Response): Promise<voi
         console.log(`[oai-sandbox] No existing env var config for agent ${context.identity.agentId}`);
       }
     } catch {
-      console.log(`[oai-sandbox] No existing env var config found for agent ${context.identity.agentId} — starting fresh`);
+      console.log(`[oai-sandbox] No existing env var config found for agent ${context.identity.agentId} - starting fresh`);
     }
 
     res.json({ pairs, layerId: context.identity.layerId });

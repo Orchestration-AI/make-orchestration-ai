@@ -38,7 +38,7 @@ export async function getSandboxDescription(
     {
       path: "create_session",
       method: "POST",
-      description: `Part of OAI Sandbox. Creates a new sandbox session and returns a sessionId. Optionally attach a volume mount to sync OAI Files into the VM before each job and back after. Available mount scopes: ${scopeList}. IMPORTANT: Only the mounted directory is guaranteed to persist state between jobs — the rest of the VM filesystem is ephemeral and may be reset between runs. If you install tools or download files that you want to reuse across jobs, place them inside the mounted directory.`,
+      description: `Part of OAI Sandbox. Creates a new sandbox session and returns a sessionId. Optionally attach a volume mount to sync OAI Files into the VM before each job and back after. Available mount scopes: ${scopeList}. IMPORTANT: Only the mounted directory is guaranteed to persist state between jobs - the rest of the VM filesystem is ephemeral and may be reset between runs. If you install tools or download files that you want to reuse across jobs, place them inside the mounted directory.`,
       parameters: {
         mount_scope: {
           type: "string",
@@ -60,7 +60,7 @@ export async function getSandboxDescription(
     {
       path: "run_command",
       method: "POST",
-      description: "Part of OAI Sandbox. Enqueues a shell command to run in a Linux VM for the given session. Returns a jobId immediately — the command runs asynchronously and you will receive a ticker notification when it completes. IMPORTANT: Jobs have a hard timeout of 30 minutes — at 30 minutes the VM is forcibly terminated regardless of what is running. Plan long-running work accordingly and break it into smaller jobs if needed. When a job finishes (or is terminated), upsync runs automatically — any files written to the mounted directory are synced back to OAI Files before the ticker notification is sent, so you do not need to manually upload results. Only the mounted directory is synced; files written elsewhere in the VM are lost when the job ends.",
+      description: "Part of OAI Sandbox. Enqueues a shell command to run in a Linux VM for the given session. Returns a jobId immediately - the command runs asynchronously and you will receive a ticker notification when it completes. IMPORTANT: Jobs have a hard timeout of 30 minutes - at 30 minutes the VM is forcibly terminated regardless of what is running. Plan long-running work accordingly and break it into smaller jobs if needed. When a job finishes (or is terminated), upsync runs automatically - any files written to the mounted directory are synced back to OAI Files before the ticker notification is sent, so you do not need to manually upload results. Only the mounted directory is synced; files written elsewhere in the VM are lost when the job ends.",
       parameters: {
         session_id: { type: "string", optional: false, description: "Session ID returned by create_session." },
         command: { type: "string", optional: false, description: "Shell command to execute in the VM. Write any output files you want to keep to the mounted directory so they are automatically upsynced on completion." },
@@ -69,7 +69,7 @@ export async function getSandboxDescription(
     {
       path: "end_session",
       method: "POST",
-      description: "Part of OAI Sandbox. Ends a session and destroys its local volume mount state. Call this when you are done with a session to free resources. Ensure any important files have been written to the mounted directory before ending — upsync only runs automatically at job completion, not at session end.",
+      description: "Part of OAI Sandbox. Ends a session and destroys its local volume mount state. Call this when you are done with a session to free resources. Ensure any important files have been written to the mounted directory before ending - upsync only runs automatically at job completion, not at session end.",
       parameters: {
         session_id: { type: "string", optional: false, description: "Session ID to end." },
       },

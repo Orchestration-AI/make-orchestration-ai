@@ -155,13 +155,13 @@ export async function downsync(sessionId: string, mount: MountConfig, sandbox: S
 
     const downloadUrl = await getDownloadUrl(mount.scope, remoteFile, context, apiClient);
     if (!downloadUrl) {
-      console.warn(`[oai-sandbox:sync] No download URL for ${remoteFile} — skipping`);
+      console.warn(`[oai-sandbox:sync] No download URL for ${remoteFile} - skipping`);
       continue;
     }
 
     const res = await fetch(downloadUrl);
     if (!res.ok) {
-      console.warn(`[oai-sandbox:sync] Failed to download ${remoteFile}: HTTP ${res.status} — skipping`);
+      console.warn(`[oai-sandbox:sync] Failed to download ${remoteFile}: HTTP ${res.status} - skipping`);
       continue;
     }
 
@@ -189,7 +189,7 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
   try {
     await sandbox.fs.stat(mount.local_path);
   } catch {
-    console.log(`[oai-sandbox:sync] Mount dir VM:${mount.local_path} does not exist — nothing to upsync`);
+    console.log(`[oai-sandbox:sync] Mount dir VM:${mount.local_path} does not exist - nothing to upsync`);
     return;
   }
 
@@ -220,7 +220,7 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
       const contentType = inferContentType(vmPath);
       const uploadData = await getUploadUrl(mount.scope, remotePath, contentType, context, apiClient);
       if (!uploadData?.upload_url) {
-        console.warn(`[oai-sandbox:sync] No upload URL for ${remotePath} — skipping`);
+        console.warn(`[oai-sandbox:sync] No upload URL for ${remotePath} - skipping`);
         continue;
       }
 
@@ -234,7 +234,7 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
         },
       });
       if (!res.ok) {
-        console.warn(`[oai-sandbox:sync] Failed to upload ${remotePath}: HTTP ${res.status} — skipping`);
+        console.warn(`[oai-sandbox:sync] Failed to upload ${remotePath}: HTTP ${res.status} - skipping`);
         continue;
       }
 

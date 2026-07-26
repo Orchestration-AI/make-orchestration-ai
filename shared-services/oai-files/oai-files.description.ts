@@ -23,7 +23,7 @@ export async function loadSettings(context: Context, apiClient: Client): Promise
   return (data?.settings ?? []) as Setting[];
 }
 
-const UPLOAD_URL_NOTE = "Returns upload_url, expires_at, and max_size_bytes. To upload, PUT the file bytes directly to upload_url with two required headers: 'Content-Type: <your content_type>' and 'x-goog-content-length-range: 0,<max_size_bytes>'. Both headers are mandatory — omitting either will result in a 400 error from GCS.";
+const UPLOAD_URL_NOTE = "Returns upload_url, expires_at, and max_size_bytes. To upload, PUT the file bytes directly to upload_url with two required headers: 'Content-Type: <your content_type>' and 'x-goog-content-length-range: 0,<max_size_bytes>'. Both headers are mandatory - omitting either will result in a 400 error from GCS.";
 
 const writeTextParams = {
   path: { type: "string" as const, optional: false, description: "Destination file path (e.g. 'notes/summary.txt')." },

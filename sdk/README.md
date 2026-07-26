@@ -230,8 +230,8 @@ const chat = openStreamingChat('agent-id', 0, {
   onOpen: () => console.log('[Connected]'),
   onClose: () => console.log('[Disconnected]'),
 }, {
-  accessKey: 'your-access-key', // optional — falls back to OAI_ACCESS_KEY env
-  sessionId: 'optional-session-id', // optional — enables conversation persistence
+  accessKey: 'your-access-key', // optional - falls back to OAI_ACCESS_KEY env
+  sessionId: 'optional-session-id', // optional - enables conversation persistence
 });
 
 // Send a message (agent streams its reply via onChunk)
@@ -265,7 +265,7 @@ document.getElementById('send-btn').onclick = () => {
 
 **Key details:**
 
-- The connection maintains conversation memory — each message builds on prior context within the session.
+- The connection maintains conversation memory - each message builds on prior context within the session.
 - Sending a new message while a response is streaming implicitly cancels the previous stream.
 - Calling `chat.close()` ends the session. Open a new connection for a fresh conversation.
 - Unknown server channels are silently ignored for forward compatibility.
