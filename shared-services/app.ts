@@ -18,7 +18,7 @@ import { internetService } from "./internet/internet.service.definition.ts";
 import { timeService } from "./time/time.service.definition.ts";
 import { oaiSandboxService } from "./oai-sandbox/oai-sandbox.service.definition.ts";
 import { registerQueueListener } from "./oai-sandbox/oai-sandbox.service.ts";
-import { handleJobDone, handleConfigInit, handleConfigSave, handleJobsList, handleJobCancel, handleJobOutput, handleJobStop, handleResetCounter } from "./oai-sandbox/oai-sandbox.handlers.ts";
+import { handleConfigInit, handleConfigSave, handleJobsList, handleJobCancel, handleJobOutput, handleJobStop, handleResetCounter } from "./oai-sandbox/oai-sandbox.handlers.ts";
 import "./oai-sandbox/oai-sandbox.crons.ts";
 import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
 import { sendMarkdownMail } from "./mail/mail.service.ts";
@@ -193,12 +193,6 @@ app.expressApp.use(
 app.expressApp.use(
   "/services/voice/chat",
   express.static("./voice/public")
-);
-
-// OAI Sandbox: job-done webhook
-app.expressApp.post(
-  "/services/oai-sandbox/api/job-done/:layerId/:jobId",
-  handleJobDone
 );
 
 // OAI Sandbox: env-var config UI init + save

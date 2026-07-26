@@ -2,7 +2,7 @@ import { getContext } from "../context.middleware.ts";
 import { createApiClient } from "@orchestration-ai/sdk/services";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
 import { authDecryptPasskey, storageDownloadFileAgent, storageUploadFileAgent } from "@orchestration-ai/sdk/sdk.gen";
-import { finalizeJob, kv, decrementSemaphore, type JobRecord, type SessionRecord } from "./oai-sandbox.queue.ts";
+import { kv, decrementSemaphore, type JobRecord, type SessionRecord } from "./oai-sandbox.queue.ts";
 import { Sandbox } from "@deno/sandbox";
 import { CONFIG_FILE_PATH } from "./oai-sandbox.constants.ts";
 import { getRequiredEnvValue } from "../environment.ts";
@@ -22,30 +22,6 @@ function makeApiClient(workspaceOwnerId: string) {
   return apiClient;
 }
 
-// POST /services/oai-sandbox/api/job-done/:layerId/:jobId
-export async function handleJobDone(req: Request, res: Response): Promise<void> {
-  const { layerId, jobId } = req.params;
-  console.log(`[oai-sandbox] Webhook received: job-done for job ${jobId} (layerId: ${layerId})`);
-  try {
-    const { exit_code } = req.body as { exit_code: number };
-    console.log(`[oai-sandbox] Job ${jobId} reported exit code: ${exit_code}`);
-
-    const context = await getContext(layerId);
-    const jobEntry = await kv.get<{ sessionId: string }>(["sandbox_job", jobId]);
-    if (!jobEntry.value) {
-      console.warn(`[oai-sandbox] Job ${jobId} not found in KV - may have already been finalized`);
-      res.status(404).send("Job not found");
-      return;
-    }
-
-    console.log(`[oai-sandbox] Finalizing job ${jobId} for session ${jobEntry.value.sessionId}`);
-    await finalizeJob(jobId, jobEntry.value.sessionId, exit_code ?? -1);
-    res.status(200).send("ok");
-  } catch (err) {
-    console.error(`[oai-sandbox] job-done webhook error for job ${jobId}:`, err);
-    res.status(500).send(`${err}`);
-  }
-}
 
 // GET /services/oai-sandbox/config/api/init
 export async function handleConfigInit(req: Request, res: Response): Promise<void> {

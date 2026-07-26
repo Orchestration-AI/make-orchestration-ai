@@ -195,13 +195,10 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
 
   await incrementSemaphore();
 
+  let sandbox: InstanceType<typeof Sandbox> | undefined;
   try {
     const apiClient = makeApiClient(session.identity);
-
     const envVars = await loadEnvVars(session.identity);
-
-    const webhookUrl = `${process.env.SELF_PUBLIC_URL ?? ""}/services/oai-sandbox/api/job-done/${session.layerId}/${jobId}`;
-    const injectedCommand = `(${command}); _EC=$?; curl -sf -X POST '${webhookUrl}' -H 'Content-Type: application/json' -d "{\\\"exit_code\\\":$_EC}" || true; exit $_EC`;
 
     const sandboxOptions: SandboxOptions = {
       timeout: SANDBOX_TIMEOUT_SECS,
@@ -214,29 +211,37 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
     }
 
     console.log(`[oai-sandbox] Creating sandbox for job ${jobId} in region ${SANDBOX_REGION} with timeout ${SANDBOX_TIMEOUT_SECS}`);
-    const sandbox = await Sandbox.create(sandboxOptions);
+    sandbox = await Sandbox.create(sandboxOptions);
     console.log(`[oai-sandbox] Sandbox ${sandbox.id} created for job ${jobId}`);
 
     await kv.set(["sandbox_job", jobId], { sessionId, sandboxId: sandbox.id, status: "running", enqueuedAt: Date.now(), startedAt: Date.now() } satisfies JobRecord);
 
     if (session.mount) {
-      console.log(`[oai-sandbox] Starting downsync for job ${jobId}: ${session.mount.scope}:${session.mount.remote_path} → ${session.mount.local_path}`);
+      console.log(`[oai-sandbox] Starting downsync for job ${jobId}`);
       await downsync(sessionId, session.mount, sandbox, { identity: session.identity } as never, apiClient);
       console.log(`[oai-sandbox] Downsync complete for job ${jobId}`);
     }
 
     console.log(`[oai-sandbox] Executing command for job ${jobId} in sandbox ${sandbox.id}`);
-    await sandbox.sh`${injectedCommand}`.sudo().noThrow();
-    console.log(`[oai-sandbox] Command finished for job ${jobId}, closing sandbox connection`);
-    await sandbox.close();
+    const result = await sandbox.sh`${command}`.sudo().noThrow().result();
+    const exitCode = result.status.code ?? 0;
+    const stdout = result.stdoutText ?? "";
+    const stderr = result.stderrText ?? "";
+    console.log(`[oai-sandbox] Command finished for job ${jobId} (exit code: ${exitCode})`);
+    if (stdout) console.log(`[oai-sandbox] stdout for job ${jobId}:
+${stdout}`);
+    if (stderr) console.warn(`[oai-sandbox] stderr for job ${jobId}:
+${stderr}`);
+
+    await finalizeJob(jobId, sessionId, exitCode, stdout, stderr, sandbox, apiClient);
 
   } catch (err) {
     await decrementSemaphore();
-    console.error(`[oai-sandbox] Job ${jobId} failed to start:`, err);
-
+    console.error(`[oai-sandbox] Job ${jobId} failed:`, err);
+    if (sandbox) { try { await sandbox.kill(); } catch { /* ignore */ } }
     const session2 = (await kv.get<SessionRecord>(["sandbox_session", sessionId])).value;
     if (session2) {
-      await sendTickerTask(session2, `OAI Sandbox: Job ${jobId} failed to start. Error: ${err}`);
+      await sendTickerTask(session2, `OAI Sandbox: Job ${jobId} failed. Error: ${err}`);
     }
     await kv.delete(["sandbox_job", jobId]);
   }
@@ -246,6 +251,10 @@ export async function finalizeJob(
   jobId: string,
   sessionId: string,
   exitCode: number,
+  stdout: string,
+  stderr: string,
+  sandbox: InstanceType<typeof Sandbox>,
+  apiClient: ReturnType<typeof makeApiClient>,
 ): Promise<void> {
   console.log(`[oai-sandbox] Finalizing job ${jobId} for session ${sessionId} (exit code: ${exitCode})`);
 
@@ -256,38 +265,30 @@ export async function finalizeJob(
   }
   const session = sessionEntry.value;
 
-  const apiClient = makeApiClient(session.identity);
-
-  const jobEntry = await kv.get<JobRecord>(["sandbox_job", jobId]);
-  const sandboxId = jobEntry.value?.sandboxId;
-
-  if (session.mount && sandboxId) {
-    console.log(`[oai-sandbox] Reconnecting to sandbox ${sandboxId} for upsync of job ${jobId}`);
+  if (session.mount) {
+    console.log(`[oai-sandbox] Starting upsync for job ${jobId}`);
     try {
-      const sandbox = await Sandbox.connect(sandboxId);
-      console.log(`[oai-sandbox] Starting upsync for job ${jobId}: ${session.mount.local_path} → ${session.mount.scope}:${session.mount.remote_path}`);
       await upsync(sessionId, session.mount, sandbox, { identity: session.identity } as never, apiClient);
-      console.log(`[oai-sandbox] Upsync complete for job ${jobId}, killing sandbox ${sandboxId}`);
-      await sandbox.kill();
-      console.log(`[oai-sandbox] Sandbox ${sandboxId} killed`);
+      console.log(`[oai-sandbox] Upsync complete for job ${jobId}`);
     } catch (err) {
-      console.warn(`[oai-sandbox] Upsync/kill failed for job ${jobId} (sandbox ${sandboxId}):`, err);
+      console.warn(`[oai-sandbox] Upsync failed for job ${jobId}:`, err);
     }
-  } else if (sandboxId) {
-    console.log(`[oai-sandbox] No mount configured - killing sandbox ${sandboxId} for job ${jobId}`);
-    try {
-      const sandbox = await Sandbox.connect(sandboxId);
-      await sandbox.kill();
-      console.log(`[oai-sandbox] Sandbox ${sandboxId} killed`);
-    } catch (err) {
-      console.warn(`[oai-sandbox] Failed to kill sandbox ${sandboxId} for job ${jobId}:`, err);
-    }
-  } else {
-    console.warn(`[oai-sandbox] No sandboxId recorded for job ${jobId} - cannot kill VM`);
+  }
+
+  try {
+    await sandbox.kill();
+    console.log(`[oai-sandbox] Sandbox killed for job ${jobId}`);
+  } catch (err) {
+    console.warn(`[oai-sandbox] Failed to kill sandbox for job ${jobId}:`, err);
   }
 
   await kv.set(["sandbox_session", sessionId], { ...session, lastJobAt: Date.now() } satisfies SessionRecord);
-  await sendTickerTask(session, `OAI Sandbox: Job ${jobId} finished. Exit code: ${exitCode}`);
+
+  const parts = [stdout ? "stdout:\n" + stdout : "", stderr ? "stderr:\n" + stderr : ""].filter(Boolean);
+  const outputSummary = parts.join("\n\n");
+  const tickerMsg = "OAI Sandbox: Job " + jobId + " finished. Exit code: " + exitCode + (outputSummary ? "\n\n" + outputSummary : "");
+  await sendTickerTask(session, tickerMsg);
+
   await kv.delete(["sandbox_job", jobId]);
   await decrementSemaphore();
   console.log(`[oai-sandbox] Job ${jobId} finalized`);
