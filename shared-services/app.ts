@@ -16,6 +16,10 @@ import { oaiFilesService } from "./oai-files/oai-files.service.definition.ts";
 import { multimediaService } from "./multimedia/multimedia.service.definition.ts";
 import { internetService } from "./internet/internet.service.definition.ts";
 import { timeService } from "./time/time.service.definition.ts";
+import { oaiSandboxService } from "./oai-sandbox/oai-sandbox.service.definition.ts";
+import { registerQueueListener } from "./oai-sandbox/oai-sandbox.service.ts";
+import { handleJobDone, handleConfigInit, handleConfigSave } from "./oai-sandbox/oai-sandbox.handlers.ts";
+import "./oai-sandbox/oai-sandbox.crons.ts";
 import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
 import { sendMarkdownMail } from "./mail/mail.service.ts";
 import { getContext } from "./context.middleware.ts";
@@ -55,7 +59,8 @@ const app = createApp()
   .service(oaiFilesService)
   .service(multimediaService)
   .service(internetService)
-  .service(timeService);
+  .service(timeService)
+  .service(oaiSandboxService);
 
 // Custom: mail zapier webhook (receives emails from Zapier)
 app.expressApp.post(
@@ -189,5 +194,24 @@ app.expressApp.use(
   "/services/voice/chat",
   express.static("./voice/public")
 );
+
+// OAI Sandbox: job-done webhook
+app.expressApp.post(
+  "/services/oai-sandbox/api/job-done/:layerId/:jobId",
+  handleJobDone
+);
+
+// OAI Sandbox: env-var config UI init + save
+app.expressApp.get("/services/oai-sandbox/config/api/init", handleConfigInit);
+app.expressApp.post("/services/oai-sandbox/config/api/save", handleConfigSave);
+
+// OAI Sandbox: serve config UI static files
+app.expressApp.use(
+  "/services/oai-sandbox/config",
+  express.static("./oai-sandbox/public")
+);
+
+// Register sandbox queue listener
+registerQueueListener();
 
 app.listen(PORT);

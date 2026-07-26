@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OAI Sandbox — Env Config</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="main.js" defer></script>
+  </head>
+  <body>
+    <div class="config-container">
+      <header>
+        <h1>OAI Sandbox</h1>
+        <span class="subtitle">Environment Variable Configuration</span>
+      </header>
+
+      <main>
+        <p class="hint">
+          These key-value pairs will be injected as environment variables into the VM before each job runs.
+        </p>
+
+        <div class="table-wrapper">
+          <table id="env-table">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Value</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="env-body"></tbody>
+          </table>
+        </div>
+
+        <div class="actions">
+          <button id="add-btn" class="btn secondary">+ Add Variable</button>
+          <button id="save-btn" class="btn primary">Save</button>
+        </div>
+
+        <p id="status-msg" class="status"></p>
+      </main>
+    </div>
+  </body>
+</html>
