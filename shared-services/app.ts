@@ -1,7 +1,7 @@
 import { createApp } from "@orchestration-ai/sdk/app-builder";
 import type { Setting } from "@orchestration-ai/sdk/services";
 import { createEngineClient, createApiClient } from "@orchestration-ai/sdk/services";
-import { settingFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
+import { settingFindByAgent, taskCreate } from "@orchestration-ai/sdk/sdk.gen";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
 import process from "node:process";
 import { handleStreamingChatInit, sendMessageToAgent } from "./voice/voice.service.ts";
@@ -19,6 +19,7 @@ import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
 import { sendMarkdownMail } from "./mail/mail.service.ts";
 import { getContext } from "./context.middleware.ts";
 import { getRequiredEnvValue } from "./environment.ts";
+import { asyncWebhookProcessingSettingKey } from "./webhook/webhook.constants.ts";
 // @deno-types="npm:@types/express@5.0.0"
 import express from "express";
 
@@ -115,22 +116,49 @@ app.expressApp.post(
     try {
       const context = await getContext(req.params.layerId);
       const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
-      const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
+      const apiClient = createApiClient();
+      setupClientCredentials(apiClient, {
+        client_id: accessKey,
+        client_secret: `${accessKey}:${context.identity.workspaceOwnerId}`,
+      });
 
-      const sessionId = req.headers['x-session-id'] as string | undefined;
       const body = JSON.stringify(req.body);
       const headersText = Object.entries(req.headers)
         .map(([key, value]) => `${key}: ${value}`)
         .join("\n");
+      const message = `New Webhook event\n\nHeaders:${headersText}\n\nJSON Body:\n${body}\n`;
 
-      const agentResponse = await sendMessageToAgent(
-        `New Webhook event\n\nHeaders:${headersText}\n\nJSON Body:\n${body}\n`,
-        context,
-        engineClient,
-        sessionId
+      const { data } = await settingFindByAgent({
+        client: apiClient,
+        path: {
+          workspaceId: context.identity.workspaceId,
+          orchestrationId: context.identity.orchestrationId,
+          agentId: context.identity.agentId,
+        },
+      });
+
+      const asyncSetting = (data!.settings! as Setting[]).find(
+        (s) => s.setting_name === asyncWebhookProcessingSettingKey
       );
+      const isAsync = asyncSetting?.setting_type === "Boolean" && asyncSetting.boolean_value;
 
-      res.send(agentResponse);
+      if (isAsync) {
+        await taskCreate({
+          client: apiClient,
+          path: {
+            workspaceId: context.identity.workspaceId,
+            orchestrationId: context.identity.orchestrationId,
+            agentId: context.identity.agentId,
+          },
+          body: { message },
+        });
+        res.send("MESSAGE_RECEIVED");
+      } else {
+        const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
+        const sessionId = req.headers['x-session-id'] as string | undefined;
+        const agentResponse = await sendMessageToAgent(message, context, engineClient, sessionId);
+        res.send(agentResponse);
+      }
     } catch (e) {
       console.warn(e);
       res.status(500).send(`${e}`);
