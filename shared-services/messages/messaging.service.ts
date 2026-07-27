@@ -17,13 +17,13 @@ function asyncMessagingEnabled(settings: Setting[]): boolean {
 }
 
 export function messageLayerBelow(message: string, context: Context, engineClient: Client) {
-  console.log("Messaging layer below");
+  console.log(`[messaging] Messaging layer below for agent ${context.identity.agentId}`);
   const layerBelowIndex = context.identity.layerIndex + 1;
   return sendMessages(context.identity.agentId, layerBelowIndex, [{ message }], context.identity.layerId, engineClient);
 }
 
 export function messageLayerAbove(message: string, context: Context, engineClient: Client) {
-  console.log("Messaging layer above");
+  console.log(`[messaging] Messaging layer above for agent ${context.identity.agentId}`);
   const layerAboveIndex = context.identity.layerIndex - 1;
   return sendMessages(context.identity.agentId, layerAboveIndex, [{ message }], context.identity.layerId, engineClient);
 }
@@ -35,7 +35,7 @@ export async function messageOtherAgent(
   engineClient: Client,
   apiClient: Client
 ) {
-  console.log("Messaging other agent");
+  console.log(`[messaging] Messaging other agent ${otherAgentId} from agent ${context.identity.agentId}`);
   const { data } = await settingFindByAgent({
     client: apiClient,
     path: {

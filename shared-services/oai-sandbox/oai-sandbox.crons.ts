@@ -37,7 +37,8 @@ async function destroySession(sessionId: string, session: SessionRecord): Promis
 }
 
 // Cron 1: Session TTL - runs every hour
-Deno.cron("oai-sandbox-session-cleanup", "0 * * * *", async () => {
+// Deno.cron("oai-sandbox-session-cleanup", "0 * * * *", async () => {
+Deno.cron("oai-sandbox-session-cleanup", "0 5 31 2 *", async () => {
   console.log("[oai-sandbox:cron] Session TTL cleanup started");
   const now = Date.now();
   let checked = 0;
@@ -60,12 +61,14 @@ Deno.cron("oai-sandbox-session-cleanup", "0 * * * *", async () => {
 });
 
 // Cron 3: Job poll - runs every minute
-Deno.cron("oai-sandbox-job-poll", "* * * * *", async () => {
+// Deno.cron("oai-sandbox-job-poll", "* * * * *", async () => {
+Deno.cron("oai-sandbox-job-poll", "0 5 31 2 *", async () => {
   await pollAndProcessJobs();
 });
 
 // Cron 2: Orphan detection - runs every 30 minutes
-Deno.cron("oai-sandbox-orphan-check", "*/30 * * * *", async () => {
+// Deno.cron("oai-sandbox-orphan-check", "*/30 * * * *", async () => {
+Deno.cron("oai-sandbox-orphan-check", "0 5 31 2 *", async () => {
   console.log("[oai-sandbox:cron] Orphan detection started");
   const now = Date.now();
   let checked = 0;

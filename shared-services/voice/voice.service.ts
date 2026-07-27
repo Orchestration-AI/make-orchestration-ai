@@ -27,11 +27,11 @@ export async function handleStreamingChatInit(req: Request, res: Response) {
     if (!layerId) { res.status(401).send("Invalid passkey"); return; }
 
     const context = await getContext(layerId);
-    console.log("[voice] Context:", JSON.stringify(context.identity));
+    console.log(`[voice] Context: agentId=${context.identity.agentId} layerId=${context.identity.layerId}`);
     const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
     const clientId = getRequiredEnvValue("OAI_CLIENT_ID");
 
-    console.log("[voice] Setting up credentials with workspaceOwnerId:", context.identity.workspaceOwnerId);
+    console.log(`[voice] Setting up credentials for workspaceOwnerId=${context.identity.workspaceOwnerId}`);
     setupClientCredentials(apiClient, {
       client_secret: accessKey,
       client_id: `${clientId}:${context.identity.workspaceOwnerId}`,
@@ -49,11 +49,13 @@ export async function handleStreamingChatInit(req: Request, res: Response) {
     const layerIndex = parseInt(getTextSetting(settings, "AGENT_LAYER") ?? "0", 10);
 
     const passkeyResponse = await authGeneratePasskey({ client: apiClient });
-    console.log("[voice] authGeneratePasskey response error:", passkeyResponse.error);
+    if (passkeyResponse.error) {
+      console.warn("[voice] authGeneratePasskey error:", passkeyResponse.error);
+    }
 
     const inferencePasskey = passkeyResponse.data?.passkey;
     if (!inferencePasskey) {
-      console.warn("[voice] Failed to generate inference passkey. Full response:", JSON.stringify(passkeyResponse));
+      console.warn("[voice] Failed to generate inference passkey");
     }
 
     const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
@@ -66,7 +68,7 @@ export async function handleStreamingChatInit(req: Request, res: Response) {
       engineUrl,
     });
   } catch (e) {
-    console.warn("[voice] Init failed:", e);
+    console.error("[voice] Init failed:", e);
     res.status(500).send("Init failed");
   }
 }

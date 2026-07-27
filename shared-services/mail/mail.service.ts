@@ -53,7 +53,7 @@ async function resolveAttachments(
       const contentType = res.headers.get("content-type") ?? "application/octet-stream";
       result.push({ filename, content: base64, contentType });
     } catch (err) {
-      console.warn(`[mail] Failed to resolve attachment ${storagePath}:`, err);
+      console.warn(`[mail:attachments] Failed to resolve attachment ${storagePath}:`, err);
     }
   }
   return result;

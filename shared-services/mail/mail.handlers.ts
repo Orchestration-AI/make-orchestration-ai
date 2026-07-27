@@ -62,7 +62,7 @@ export async function handleMailConfigInit(req: Request, res: Response): Promise
       },
     });
   } catch (err) {
-    console.warn("[mail:config] Init error:", err);
+    console.error("[mail:config] Init error:", err);
     res.status(500).send("Init failed");
   }
 }
@@ -118,7 +118,7 @@ export async function handleMailTestSmtp(req: Request, res: Response): Promise<v
     }
     res.json({ success: true });
   } catch (err) {
-    console.warn("[mail:config] SMTP test error:", err);
+    console.error("[mail:config] SMTP test error:", err);
     res.status(500).json({ success: false, error: `${err}` });
   }
 }
@@ -164,7 +164,7 @@ export async function handleMailTestImap(req: Request, res: Response): Promise<v
     }
     res.json({ success: true });
   } catch (err) {
-    console.warn("[mail:config] IMAP test error:", err);
+    console.error("[mail:config] IMAP test error:", err);
     res.status(500).json({ success: false, error: `${err}` });
   }
 }

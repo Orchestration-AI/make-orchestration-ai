@@ -42,7 +42,7 @@ export async function runQuery(query: string, settings: Setting[]) {
   } catch (e) {
     await tx.rollback();
     await pool.close();
-
+    console.warn("[sql-server] Query failed:", e);
     throw e;
   }
 }

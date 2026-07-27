@@ -92,7 +92,7 @@ async function handleCallInitiated(callControlId: string, layerId: string) {
         flushBuffer();
       },
       onError: (err: string) => {
-        console.warn(`[telnyx-voice] Chat error for ${callControlId}:`, err);
+        console.error(`[telnyx-voice] Chat error for call ${callControlId}:`, err);
       },
       onClose: () => {
         activeCalls.delete(callControlId);
@@ -110,7 +110,7 @@ async function handleCallInitiated(callControlId: string, layerId: string) {
     // Answer the call
     await telnyxCommand(apiKey, callControlId, "answer");
   } catch (e) {
-    console.warn(`[telnyx-voice] Failed to answer call ${callControlId}:`, e);
+    console.error(`[telnyx-voice] Failed to answer call ${callControlId}:`, e);
     // Try to reject
     try {
       const settings = await getSettings(layerId);
@@ -177,7 +177,7 @@ export async function handleTelnyxWebhook(req: Request, res: Response) {
     }
     res.status(200).send("");
   } catch (e) {
-    console.warn("[telnyx-voice] Webhook error:", e);
+    console.error("[telnyx-voice] Webhook error:", e);
     res.status(500).send("");
   }
 }

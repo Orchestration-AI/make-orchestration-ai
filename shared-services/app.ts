@@ -120,7 +120,7 @@ app.expressApp.post(
         res.send(agentResponse);
       }
     } catch (e) {
-      console.warn(e);
+      console.error("[webhook] Event handler error:", e);
       res.status(500).send(`${e}`);
     }
   }
