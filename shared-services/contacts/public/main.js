@@ -14,7 +14,7 @@ let pendingMembers = []; // { agentId, name }
 // ── Status ────────────────────────────────────────────────────────────────────
 
 function setStatus(text, type = "") {
-  const el = document.getElementById("status");
+  const el = document.getElementById("status-msg");
   el.textContent = text;
   el.className = "status " + type;
 }
@@ -109,11 +109,20 @@ function closeModal() {
 }
 
 function toggleTypeSections(type) {
-  document.getElementById("individual-section").classList.toggle("hidden", type === "group");
-  document.getElementById("group-section").classList.toggle("hidden", type !== "group");
+  const isGroup = type === "group";
+  document.getElementById("individual-fields").classList.toggle("hidden", isGroup);
+  document.getElementById("individual-section").classList.toggle("hidden", isGroup);
+  document.getElementById("group-section").classList.toggle("hidden", !isGroup);
 }
 
-document.getElementById("field-type").addEventListener("change", (e) => toggleTypeSections(e.target.value));
+document.getElementById("field-type").addEventListener("change", (e) => {
+  const isGroup = e.target.value === "group";
+  toggleTypeSections(e.target.value);
+  if (isGroup) {
+    document.getElementById("field-email").value = "";
+    document.getElementById("field-phone").value = "";
+  }
+});
 
 function renderMemberTags() {
   const container = document.getElementById("member-list");
@@ -141,40 +150,47 @@ document.getElementById("member-add-btn").addEventListener("click", () => {
   renderMemberTags();
 });
 
+document.getElementById("modal-close").addEventListener("click", closeModal);
 document.getElementById("cancel-btn").addEventListener("click", closeModal);
-document.getElementById("modal-overlay").addEventListener("click", (e) => {
-  if (e.target === document.getElementById("modal-overlay")) closeModal();
-});
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 
 document.getElementById("contact-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const type = document.getElementById("field-type").value;
-  const agentId = document.getElementById("field-agent").value;
+  const saveBtn = document.getElementById("save-btn");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Saving…";
 
-  const contact = {
-    id: type === "individual" && agentId
-      ? agentId
-      : (document.getElementById("field-id").value || crypto.randomUUID()),
-    name: document.getElementById("field-name").value.trim(),
-    description: document.getElementById("field-description").value.trim(),
-    type,
-    email: document.getElementById("field-email").value.trim() || undefined,
-    phone: document.getElementById("field-phone").value.trim() || undefined,
-    ...(type === "group" ? { members: pendingMembers } : {}),
-  };
+  try {
+    const type = document.getElementById("field-type").value;
+    const agentId = document.getElementById("field-agent").value;
 
-  if (editingId) {
-    const idx = contacts.findIndex((c) => c.id === editingId);
-    if (idx !== -1) contacts[idx] = contact;
-  } else {
-    contacts.push(contact);
+    const contact = {
+      id: type === "individual" && agentId
+        ? agentId
+        : (document.getElementById("field-id").value || crypto.randomUUID()),
+      name: document.getElementById("field-name").value.trim(),
+      description: document.getElementById("field-description").value.trim(),
+      type,
+      email: document.getElementById("field-email").value.trim() || undefined,
+      phone: document.getElementById("field-phone").value.trim() || undefined,
+      ...(type === "group" ? { members: pendingMembers } : {}),
+    };
+
+    if (editingId) {
+      const idx = contacts.findIndex((c) => c.id === editingId);
+      if (idx !== -1) contacts[idx] = contact;
+    } else {
+      contacts.push(contact);
+    }
+
+    await saveContacts();
+    closeModal();
+    renderTable();
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save";
   }
-
-  await saveContacts();
-  closeModal();
-  renderTable();
 });
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -226,7 +242,8 @@ async function init() {
     document.getElementById("app").classList.remove("hidden");
     setStatus("");
   } catch (err) {
-    setStatus("Failed to load: " + err.message, "error");
+    document.getElementById("load-status").textContent = "Failed to load: " + err.message;
+    document.getElementById("load-status").className = "status center-status error";
   }
 }
 
