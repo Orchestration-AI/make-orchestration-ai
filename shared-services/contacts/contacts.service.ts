@@ -2,7 +2,7 @@ import type { Context } from "@orchestration-ai/sdk/services";
 import type { Client } from "@orchestration-ai/sdk/app-builder";
 import { taskCreate, agentFindById, settingFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
 import type { Setting } from "@orchestration-ai/sdk/services";
-import { sendMessages } from "@orchestration-ai/sdk/services";
+import { sendMessages, getBooleanSetting } from "@orchestration-ai/sdk/services";
 import { readContacts, writeContacts } from "./contacts.storage.ts";
 import type { Contact, ContactMember } from "./contacts.storage.ts";
 import { asyncMessagingSettingKey } from "./contacts.constants.ts";
@@ -12,8 +12,7 @@ function crypto_uuid(): string {
 }
 
 function asyncMessagingEnabled(settings: Setting[]): boolean {
-  const s = settings.find((s) => s.setting_name === asyncMessagingSettingKey);
-  return s?.setting_type === "Boolean" ? (s.boolean_value ?? false) : false;
+  return getBooleanSetting(settings, asyncMessagingSettingKey);
 }
 
 // ── List ──────────────────────────────────────────────────────────────────────

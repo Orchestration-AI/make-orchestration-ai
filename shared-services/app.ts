@@ -18,6 +18,7 @@ import { internetService } from "./internet/internet.service.definition.ts";
 import { timeService } from "./time/time.service.definition.ts";
 import { oaiSandboxService } from "./oai-sandbox/oai-sandbox.service.definition.ts";
 import { contactsService } from "./contacts/contacts.service.definition.ts";
+import { remindersService } from "./reminders/reminders.service.definition.ts";
 import { handleContactsInit, handleContactsAgents, handleContactsSave } from "./contacts/contacts.handlers.ts";
 import { registerQueueListener } from "./oai-sandbox/oai-sandbox.service.ts";
 import { handleConfigInit, handleConfigSave, handleJobsList, handleJobCancel, handleJobOutput, handleJobStop, handleResetCounter } from "./oai-sandbox/oai-sandbox.handlers.ts";
@@ -48,6 +49,14 @@ const app = createApp()
       justification: "Submit ticker tasks to other agents for async inter-agent messaging.",
     },
     {
+      permission_name: "role_task_lister",
+      justification: "List active ticker tasks to read agent reminders.",
+    },
+    {
+      permission_name: "role_task_deleter",
+      justification: "Delete ticker tasks to remove or update agent reminders.",
+    },
+    {
       permission_name: "role_storage_workspace_writer",
       justification: "Read and write files across all storage scopes on behalf of agents.",
     },
@@ -63,7 +72,8 @@ const app = createApp()
   .service(multimediaService)
   .service(internetService)
   .service(timeService)
-  .service(contactsService);
+  .service(contactsService)
+  .service(remindersService);
   // .service(oaiSandboxService);
 
 // Custom: contacts GUI
