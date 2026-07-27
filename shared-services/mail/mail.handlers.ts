@@ -48,6 +48,7 @@ export async function handleMailConfigInit(req: Request, res: Response): Promise
       },
     });
     const settings = data!.settings! as Setting[];
+    console.log(settings);
     res.json({
       layerId: context.identity.layerId,
       settings: {
