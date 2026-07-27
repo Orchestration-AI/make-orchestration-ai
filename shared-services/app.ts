@@ -36,8 +36,8 @@ const PORT = process.env.PORT || 3001;
 const app = createApp()
   .permissions([
     {
-      permission_name: "role_agent_reader",
-      justification: "Read agent context and send messages to agents within the orchestration.",
+      permission_name: "role_agent_lister",
+      justification: "List agents within an orchestration to populate contact dropdowns.",
     },
     {
       permission_name: "role_agent_writer",

@@ -1,6 +1,7 @@
 import type { Client } from "@orchestration-ai/sdk/app-builder";
 import { storageUploadFileAgent } from "@orchestration-ai/sdk/sdk.gen";
 import { putToSignedUrl } from "../oai-files/oai-files.service.ts";
+import { appPath } from "../storage.ts";
 import type { EmailAttachment } from "./imap.proxy.ts";
 
 export type StoredAttachment = {
@@ -23,7 +24,7 @@ export async function storeAttachments(
     const safeName = attachment.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
     const safeThread = threadId.replace(/[^a-zA-Z0-9._-]/g, "_");
     const safeMsg = messageId.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const storagePath = `emails/attachments/${safeThread}/${safeMsg}/${safeName}`;
+    const storagePath = appPath("emails", "attachments", safeThread, safeMsg, safeName);
 
     const { data } = await storageUploadFileAgent({
       client: apiClient,

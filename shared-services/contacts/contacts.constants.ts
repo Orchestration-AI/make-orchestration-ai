@@ -1,10 +1,10 @@
 import type { Setting } from "@orchestration-ai/sdk/services";
-
+import { appPath } from "../storage.ts";
 import { asyncMessagingSettingKey } from "../messages/messaging.constants.ts";
 
 export const CAN_MODIFY_CONTACTS_KEY = "CAN_MODIFY_CONTACTS";
 export const CONTACTS_SERVICE_UNIQUE_NAME = "contacts";
-export const CONTACTS_STORAGE_PATH = "contacts/contacts.json";
+export const CONTACTS_STORAGE_PATH = appPath("contacts", "contacts.json");
 
 export { asyncMessagingSettingKey };
 

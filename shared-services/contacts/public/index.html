@@ -39,7 +39,7 @@
         </div>
       </main>
 
-      <p id="load-status" class="status center-status"></p>
+      <p id="load-status" class="status center-status">Loading…</p>
     </div>
 
     <!-- Add / Edit modal -->
@@ -69,7 +69,7 @@
             </select>
           </div>
           <!-- Individual-only fields -->
-          <div id="individual-fields">
+          <div id="individual-section">
             <div class="form-row">
               <label>Email</label>
               <input type="email" id="field-email" />
@@ -78,14 +78,10 @@
               <label>Phone</label>
               <input type="text" id="field-phone" />
             </div>
-          </div>
-
-          <!-- Individual: agent selector -->
-          <div id="individual-section">
             <div class="form-row">
               <label>Agent (optional)</label>
               <select id="field-agent">
-                <option value="">— Not an agent contact —</option>
+                <option value="">- Not an agent contact -</option>
               </select>
             </div>
           </div>
@@ -97,7 +93,7 @@
               <div id="member-list"></div>
               <div class="member-add-row">
                 <select id="member-add-select">
-                  <option value="">— Select agent to add —</option>
+                  <option value="">- Select agent to add -</option>
                 </select>
                 <button type="button" id="member-add-btn" class="btn secondary">Add</button>
               </div>

@@ -1,3 +1,5 @@
+.hidden { display: none !important; }
+
 *, *:before, *:after {
   box-sizing: border-box;
   margin: 0;
@@ -198,7 +200,12 @@ tbody tr:hover { background: #1f2940; }
 }
 
 /* Form */
-.form-row { display: flex; flex-direction: column; gap: 0.3rem; }
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.85rem;
+}
 
 .form-row label {
   font-size: 0.75rem;

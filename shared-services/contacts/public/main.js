@@ -23,16 +23,17 @@ function setStatus(text, type = "") {
 
 function renderTable() {
   const tbody = document.getElementById("contacts-body");
-  const empty = document.getElementById("empty-msg");
   tbody.innerHTML = "";
-  if (contacts.length === 0) { empty.classList.remove("hidden"); return; }
-  empty.classList.add("hidden");
+  if (contacts.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-row">No contacts yet.</td></tr>`;
+    return;
+  }
 
   for (const c of contacts) {
     const tr = document.createElement("tr");
     const agentCol = c.type === "group"
       ? (c.members ?? []).map((m) => m.name).join(", ") || "-"
-      : c.id !== generateTempId(c) ? `Agent: ${c.id}` : "-";
+      : c.id ?? "-";
 
     tr.innerHTML = `
       <td>${esc(c.name)}</td>
@@ -56,7 +57,6 @@ function renderTable() {
   );
 }
 
-function generateTempId(c) { return c._isHuman ? c.id : null; }
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 // ── Agent dropdowns ───────────────────────────────────────────────────────────
@@ -110,7 +110,6 @@ function closeModal() {
 
 function toggleTypeSections(type) {
   const isGroup = type === "group";
-  document.getElementById("individual-fields").classList.toggle("hidden", isGroup);
   document.getElementById("individual-section").classList.toggle("hidden", isGroup);
   document.getElementById("group-section").classList.toggle("hidden", !isGroup);
 }
@@ -240,6 +239,7 @@ async function init() {
     populateAgentDropdowns();
     renderTable();
     document.getElementById("app").classList.remove("hidden");
+    document.getElementById("load-status").textContent = "";
     setStatus("");
   } catch (err) {
     document.getElementById("load-status").textContent = "Failed to load: " + err.message;
