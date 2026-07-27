@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OAI Contacts</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>OAI Contacts</h1>
+    <div id="status" class="status"></div>
+    <div id="app" class="hidden">
+      <div class="toolbar">
+        <button id="add-btn">+ Add Contact</button>
+      </div>
+      <table id="contacts-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Agent / Members</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="contacts-body"></tbody>
+      </table>
+      <p id="empty-msg" class="hidden muted">No contacts yet. Click "+ Add Contact" to create one.</p>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="hidden">
+    <div class="modal">
+      <h2 id="modal-title">Add Contact</h2>
+      <form id="contact-form">
+        <input type="hidden" id="field-id" />
+        <div class="form-row">
+          <label>Name *</label>
+          <input type="text" id="field-name" required />
+        </div>
+        <div class="form-row">
+          <label>Description *</label>
+          <textarea id="field-description" rows="2" required></textarea>
+        </div>
+        <div class="form-row">
+          <label>Type *</label>
+          <select id="field-type">
+            <option value="individual">Individual</option>
+            <option value="group">Group</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Email</label>
+          <input type="email" id="field-email" />
+        </div>
+        <div class="form-row">
+          <label>Phone</label>
+          <input type="text" id="field-phone" />
+        </div>
+
+        <!-- Individual: agent selector -->
+        <div id="individual-section">
+          <div class="form-row">
+            <label>Agent (optional)</label>
+            <select id="field-agent">
+              <option value="">- Not an agent contact -</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Group: member selector -->
+        <div id="group-section" class="hidden">
+          <div class="form-row">
+            <label>Members</label>
+            <div id="member-list"></div>
+            <select id="member-add-select">
+              <option value="">- Select agent to add -</option>
+            </select>
+            <button type="button" id="member-add-btn">Add Member</button>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" id="save-btn">Save</button>
+          <button type="button" id="cancel-btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="./main.js"></script>
+</body>
+</html>

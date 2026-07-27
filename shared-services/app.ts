@@ -17,6 +17,8 @@ import { multimediaService } from "./multimedia/multimedia.service.definition.ts
 import { internetService } from "./internet/internet.service.definition.ts";
 import { timeService } from "./time/time.service.definition.ts";
 import { oaiSandboxService } from "./oai-sandbox/oai-sandbox.service.definition.ts";
+import { contactsService } from "./contacts/contacts.service.definition.ts";
+import { handleContactsInit, handleContactsAgents, handleContactsSave } from "./contacts/contacts.handlers.ts";
 import { registerQueueListener } from "./oai-sandbox/oai-sandbox.service.ts";
 import { handleConfigInit, handleConfigSave, handleJobsList, handleJobCancel, handleJobOutput, handleJobStop, handleResetCounter } from "./oai-sandbox/oai-sandbox.handlers.ts";
 import "./oai-sandbox/oai-sandbox.crons.ts";
@@ -60,8 +62,15 @@ const app = createApp()
   .service(oaiFilesService)
   .service(multimediaService)
   .service(internetService)
-  .service(timeService);
+  .service(timeService)
+  .service(contactsService);
   // .service(oaiSandboxService);
+
+// Custom: contacts GUI
+app.expressApp.get("/services/contacts/config/api/init", handleContactsInit);
+app.expressApp.get("/services/contacts/config/api/agents", handleContactsAgents);
+app.expressApp.post("/services/contacts/config/api/save", handleContactsSave);
+app.expressApp.use("/services/contacts/config", express.static("./contacts/public"));
 
 // Custom: mail credential tester
 app.expressApp.get("/services/mail/config/api/init", handleMailConfigInit);
