@@ -2,6 +2,8 @@
 import showdown from "showdown";
 import type { Setting } from "@orchestration-ai/sdk/services";
 import { getBooleanSetting, getTextSetting } from "@orchestration-ai/sdk/services";
+import { storageDownloadFileAgent } from "@orchestration-ai/sdk/sdk.gen";
+import type { Client } from "@orchestration-ai/sdk/app-builder";
 import {
   smtpHostSettingKey,
   smtpPortSettingKey,
@@ -12,24 +14,49 @@ import {
 } from "./mail.constants.ts";
 import { getRequiredEnvValue } from "../environment.ts";
 
-function getMailerTransport(settings: Setting[]) {
-  const smtpHost = getTextSetting(settings, smtpHostSettingKey);
-  const smtpPort = parseInt(
-    getTextSetting(settings, smtpPortSettingKey)?.trim() ?? "25"
-  );
-  const smtpUser = getTextSetting(settings, smtpUserSettingKey);
-  const smtpPassword = getTextSetting(settings, smtpPasswordSettingKey);
-  const smtpSecure = getBooleanSetting(settings, smtpSecureSettingKey);
-
+export function getMailerTransport(settings: Setting[]) {
   return {
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpSecure,
+    host: getTextSetting(settings, smtpHostSettingKey),
+    port: parseInt(getTextSetting(settings, smtpPortSettingKey)?.trim() ?? "25"),
+    secure: getBooleanSetting(settings, smtpSecureSettingKey),
     auth: {
-      user: smtpUser,
-      pass: smtpPassword,
+      user: getTextSetting(settings, smtpUserSettingKey),
+      pass: getTextSetting(settings, smtpPasswordSettingKey),
     },
   };
+}
+
+type MailAttachment = { filename: string; content: string; contentType: string };
+
+async function resolveAttachments(
+  attachmentPaths: string[],
+  workspaceId: string,
+  orchestrationId: string,
+  agentId: string,
+  apiClient: Client,
+): Promise<MailAttachment[]> {
+  const result: MailAttachment[] = [];
+  for (const storagePath of attachmentPaths) {
+    try {
+      const { data } = await storageDownloadFileAgent({
+        client: apiClient,
+        path: { workspaceId, orchestrationId, agentId },
+        query: { path: storagePath },
+      });
+      const downloadUrl = (data as { download_url?: string })?.download_url;
+      if (!downloadUrl) continue;
+      const res = await fetch(downloadUrl);
+      if (!res.ok) continue;
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const base64 = btoa(String.fromCharCode(...bytes));
+      const filename = storagePath.split("/").pop() ?? "attachment";
+      const contentType = res.headers.get("content-type") ?? "application/octet-stream";
+      result.push({ filename, content: base64, contentType });
+    } catch (err) {
+      console.warn(`[mail] Failed to resolve attachment ${storagePath}:`, err);
+    }
+  }
+  return result;
 }
 
 async function sendMail(
@@ -39,11 +66,16 @@ async function sendMail(
   cc: string,
   bcc: string,
   subject: string,
-  transport: unknown,
-  settings: Setting[]
+  settings: Setting[],
+  sessionId?: string,
+  attachments?: MailAttachment[],
 ) {
   const smtpFrom = getTextSetting(settings, smtpSelfEmailSettingKey);
-  const body = {
+  const transport = getMailerTransport(settings);
+  const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
+  const mailProxyUrl = getRequiredEnvValue("MAIL_PROXY_URL");
+
+  const body: Record<string, unknown> = {
     transport,
     message: {
       from: smtpFrom,
@@ -53,11 +85,10 @@ async function sendMail(
       subject,
       text: textContent,
       html: htmlContent,
+      ...(sessionId ? { inReplyTo: sessionId, references: sessionId } : {}),
+      ...(attachments?.length ? { attachments } : {}),
     },
   };
-
-  const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
-  const mailProxyUrl = getRequiredEnvValue("MAIL_PROXY_URL");
 
   return (
     await fetch(mailProxyUrl, {
@@ -77,11 +108,72 @@ export function sendMarkdownMail(
   cc: string,
   bcc: string,
   subject: string,
-  settings: Setting[]
+  settings: Setting[],
+  sessionId?: string,
+  attachmentPaths?: string[],
+  workspaceId?: string,
+  orchestrationId?: string,
+  agentId?: string,
+  apiClient?: Client,
 ) {
   const converter = new showdown.Converter();
   const html = converter.makeHtml(markdown);
-  const transport = getMailerTransport(settings);
+  return sendMailWithContent(html, markdown, to, cc, bcc, subject, settings, sessionId, attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
+}
 
-  return sendMail(html, markdown, to, cc, bcc, subject, transport, settings);
+export async function sendHtmlMail(
+  html: string,
+  to: string,
+  cc: string,
+  bcc: string,
+  subject: string,
+  settings: Setting[],
+  sessionId?: string,
+  attachmentPaths?: string[],
+  workspaceId?: string,
+  orchestrationId?: string,
+  agentId?: string,
+  apiClient?: Client,
+) {
+  return sendMailWithContent(html, html, to, cc, bcc, subject, settings, sessionId, attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
+}
+
+export function replyToThread(
+  markdown: string,
+  to: string,
+  cc: string,
+  subject: string,
+  threadId: string,
+  settings: Setting[],
+  attachmentPaths?: string[],
+  workspaceId?: string,
+  orchestrationId?: string,
+  agentId?: string,
+  apiClient?: Client,
+) {
+  const converter = new showdown.Converter();
+  const html = converter.makeHtml(markdown);
+  return sendMailWithContent(html, markdown, to, cc, "", subject, settings, threadId, attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
+}
+
+async function sendMailWithContent(
+  html: string,
+  text: string,
+  to: string,
+  cc: string,
+  bcc: string,
+  subject: string,
+  settings: Setting[],
+  sessionId?: string,
+  attachmentPaths?: string[],
+  workspaceId?: string,
+  orchestrationId?: string,
+  agentId?: string,
+  apiClient?: Client,
+) {
+  let attachments: MailAttachment[] | undefined;
+  if (attachmentPaths?.length && workspaceId && orchestrationId && agentId && apiClient) {
+    attachments = await resolveAttachments(attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
+  }
+  return sendMail(html, text, to, cc, bcc, subject, settings, sessionId, attachments);
 }

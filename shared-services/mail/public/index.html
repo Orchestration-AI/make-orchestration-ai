@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OAI Mail</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="main.js" defer></script>
+  </head>
+  <body>
+    <div class="config-container">
+      <header>
+        <h1>OAI Mail</h1>
+        <span class="subtitle" id="header-subtitle">Credential Tester</span>
+      </header>
+
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="smtp">SMTP</button>
+        <button class="tab-btn" data-tab="imap">IMAP</button>
+      </nav>
+
+      <!-- SMTP Tab -->
+      <main id="tab-smtp" class="tab-panel">
+        <p class="hint">
+          Tests the SMTP credentials configured in this agent's settings by sending a test email to the agent's own address.
+        </p>
+        <div class="test-card">
+          <div class="test-card-row">
+            <span class="test-label">SMTP Host</span>
+            <span class="test-value" id="smtp-host">-</span>
+          </div>
+          <div class="test-card-row">
+            <span class="test-label">SMTP Port</span>
+            <span class="test-value" id="smtp-port">-</span>
+          </div>
+          <div class="test-card-row">
+            <span class="test-label">SMTP User</span>
+            <span class="test-value" id="smtp-user">-</span>
+          </div>
+          <div class="test-card-row">
+            <span class="test-label">Secure (TLS)</span>
+            <span class="test-value" id="smtp-secure">-</span>
+          </div>
+          <div class="test-card-row">
+            <span class="test-label">From Address</span>
+            <span class="test-value" id="smtp-from">-</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="test-smtp-btn" class="btn primary" disabled>Send Test Email</button>
+        </div>
+        <p id="smtp-status" class="status"></p>
+      </main>
+
+      <!-- IMAP Tab -->
+      <main id="tab-imap" class="tab-panel hidden">
+        <p class="hint">
+          Tests the IMAP credentials configured in this agent's settings by connecting and listing the inbox.
+        </p>
+        <div class="test-card">
+          <div class="test-card-row">
+            <span class="test-label">IMAP Host</span>
+            <span class="test-value" id="imap-host">-</span>
+          </div>
+          <div class="test-card-row">
+            <span class="test-label">IMAP Port</span>
+            <span class="test-value" id="imap-port">-</span>
+          </div>
+          <div class="test-card-row">
+            <span class="test-label">IMAP User</span>
+            <span class="test-value" id="imap-user">-</span>
+          </div>
+          <div class="test-card-row">
+            <span class="test-label">Secure (TLS)</span>
+            <span class="test-value" id="imap-secure">-</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="test-imap-btn" class="btn primary" disabled>Test IMAP Connection</button>
+        </div>
+        <p id="imap-status" class="status"></p>
+      </main>
+    </div>
+  </body>
+</html>

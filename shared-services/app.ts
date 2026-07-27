@@ -21,7 +21,8 @@ import { registerQueueListener } from "./oai-sandbox/oai-sandbox.service.ts";
 import { handleConfigInit, handleConfigSave, handleJobsList, handleJobCancel, handleJobOutput, handleJobStop, handleResetCounter } from "./oai-sandbox/oai-sandbox.handlers.ts";
 import "./oai-sandbox/oai-sandbox.crons.ts";
 import { handleTelnyxWebhook } from "./telnyx-voice/telnyx-voice.service.ts";
-import { sendMarkdownMail } from "./mail/mail.service.ts";
+import "./mail/mail.crons.ts";
+import { handleMailConfigInit, handleMailTestSmtp, handleMailTestImap } from "./mail/mail.handlers.ts";
 import { getContext } from "./context.middleware.ts";
 import { getRequiredEnvValue } from "./environment.ts";
 import { asyncWebhookProcessingSettingKey } from "./webhook/webhook.constants.ts";
@@ -62,59 +63,11 @@ const app = createApp()
   .service(timeService);
   // .service(oaiSandboxService);
 
-// Custom: mail zapier webhook (receives emails from Zapier)
-app.expressApp.post(
-  "/services/mail/api/zapier/:layerId",
-  async (req, res) => {
-    try {
-      const context = await getContext(req.params.layerId);
-      const accessKey = getRequiredEnvValue("OAI_ACCESS_KEY");
-      const engineClient = createEngineClient(process.env.ENGINE_URL ?? null, accessKey);
-      const apiClient = createApiClient();
-      setupClientCredentials(apiClient, {
-        client_id: accessKey,
-        client_secret: `${accessKey}:${context.identity.workspaceOwnerId}`,
-      });
-
-      const sessionId = req.headers['x-session-id'] as string | undefined;
-      const { body: markdownBody, from, cc, bcc, subject } = req.body;
-
-      let message = `New e-mail from ${from}\nSubject: ${subject}\n`;
-      if (cc) message += `Cc: ${cc}\n`;
-      if (bcc) message += `Bcc: ${bcc}\n`;
-
-      const agentResponse = await sendMessageToAgent(
-        `${message}\n${markdownBody}`,
-        context,
-        engineClient,
-        sessionId
-      );
-
-      const { data } = await settingFindByAgent({
-        client: apiClient,
-        path: {
-          workspaceId: context.identity.workspaceId,
-          orchestrationId: context.identity.orchestrationId,
-          agentId: context.identity.agentId,
-        },
-      });
-
-      const response = await sendMarkdownMail(
-        agentResponse,
-        from,
-        cc,
-        bcc,
-        `RE: ${subject}`,
-        data!.settings! as Setting[]
-      );
-
-      res.status(200).send(response);
-    } catch (e) {
-      console.warn(e);
-      res.status(500).send(`${e}`);
-    }
-  }
-);
+// Custom: mail credential tester
+app.expressApp.get("/services/mail/config/api/init", handleMailConfigInit);
+app.expressApp.post("/services/mail/config/api/test-smtp", handleMailTestSmtp);
+app.expressApp.post("/services/mail/config/api/test-imap", handleMailTestImap);
+app.expressApp.use("/services/mail/config", express.static("./mail/public"));
 
 // Custom: webhook event endpoint
 app.expressApp.post(

@@ -286,7 +286,7 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
       continue;
     }
 
-    // Extract mode from stat.mode bitmask — avoids a separate sh`stat` RPC call
+    // Extract mode from stat.mode bitmask - avoids a separate sh`stat` RPC call
     const mode = stat.mode ? (stat.mode & 0o777).toString(8) : undefined;
 
     const contentType = inferContentType(vmPath);

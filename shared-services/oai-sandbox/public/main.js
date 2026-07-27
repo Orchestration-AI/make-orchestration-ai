@@ -78,7 +78,7 @@ function setJobsStatus(text, type = "") {
 }
 
 function fmtTime(ms) {
-  if (!ms) return "—";
+  if (!ms) return "-";
   return new Date(ms).toLocaleTimeString();
 }
 
@@ -207,7 +207,7 @@ document.getElementById("stop-modal-confirm").addEventListener("click", async ()
       headers: { "x-layer-id": _layerId },
     });
     if (!res.ok) throw new Error(await res.text());
-    setJobsStatus("Job stopped. The agent was NOT notified — inform it manually.", "");
+    setJobsStatus("Job stopped. The agent was NOT notified - inform it manually.", "");
     loadJobs();
   } catch (err) {
     setJobsStatus("Stop failed: " + err.message, "error");

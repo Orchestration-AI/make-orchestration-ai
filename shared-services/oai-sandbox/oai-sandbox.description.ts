@@ -38,7 +38,7 @@ export async function getSandboxDescription(
     {
       path: "create_session",
       method: "POST",
-      description: `Part of OAI Sandbox. Creates a sandbox session and returns a sessionId. Optionally mount an OAI Files directory to sync files into the VM before each job and back out after. Available mount scopes: ${scopeList}. Only the mounted directory persists between jobs — everything else is ephemeral.`,
+      description: `Part of OAI Sandbox. Creates a sandbox session and returns a sessionId. Optionally mount an OAI Files directory to sync files into the VM before each job and back out after. Available mount scopes: ${scopeList}. Only the mounted directory persists between jobs - everything else is ephemeral.`,
       parameters: {
         mount_scope: {
           type: "string",
@@ -60,16 +60,16 @@ export async function getSandboxDescription(
     {
       path: "run_command",
       method: "POST",
-      description: "Part of OAI Sandbox. Enqueues a shell command to run in a Linux VM. Returns a jobId immediately — the command runs asynchronously. After calling run_command, tell the user the job is queued and stop. Do not call run_command again until you receive the ticker notification (it arrives as a new user message when the job completes). The command is run as: bash -c '<your command>' — do not prefix it with bash or bash -c yourself. Jobs time out after 30 minutes. On completion, files in the mounted directory are automatically synced back to OAI Files.",
+      description: "Part of OAI Sandbox. Enqueues a shell command to run in a Linux VM. Returns a jobId immediately - the command runs asynchronously. After calling run_command, tell the user the job is queued and stop. Do not call run_command again until you receive the ticker notification (it arrives as a new user message when the job completes). The command is run as: bash -c '<your command>' - do not prefix it with bash or bash -c yourself. Jobs time out after 30 minutes. On completion, files in the mounted directory are automatically synced back to OAI Files.",
       parameters: {
         session_id: { type: "string", optional: false, description: "Session ID from create_session." },
-        command: { type: "string", optional: false, description: "The command to run. Do not wrap it in bash or bash -c — it is already run as bash -c '<command>'. Write output files to the mounted directory so they are synced back automatically." },
+        command: { type: "string", optional: false, description: "The command to run. Do not wrap it in bash or bash -c - it is already run as bash -c '<command>'. Write output files to the mounted directory so they are synced back automatically." },
       },
     },
     {
       path: "end_session",
       method: "POST",
-      description: "Part of OAI Sandbox. Ends a session and cleans up its resources. Call this when you are done. Make sure any files you need are in the mounted directory before ending — upsync only runs at job completion, not at session end.",
+      description: "Part of OAI Sandbox. Ends a session and cleans up its resources. Call this when you are done. Make sure any files you need are in the mounted directory before ending - upsync only runs at job completion, not at session end.",
       parameters: {
         session_id: { type: "string", optional: false, description: "Session ID to end." },
       },
