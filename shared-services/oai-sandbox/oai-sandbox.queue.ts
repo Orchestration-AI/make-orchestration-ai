@@ -200,11 +200,6 @@ function sanitizeCommand(command: string): string {
   // Strip fully wrapped quotes
   if (quotes.some((q) => s.startsWith(q) && s.endsWith(q) && s.length >= 2)) {
     s = s.slice(1, -1).trim();
-  } else {
-    // Strip lone leading or trailing quote
-    if (quotes.some((q) => s.startsWith(q))) s = s.slice(1);
-    if (quotes.some((q) => s.endsWith(q))) s = s.slice(0, -1);
-    s = s.trim();
   }
   return s;
 }
