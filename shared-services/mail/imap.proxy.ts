@@ -1,5 +1,5 @@
 import type { Setting } from "@orchestration-ai/sdk/services";
-import { getTextSetting, getBooleanSetting } from "@orchestration-ai/sdk/services";
+import { getTextSetting, getBooleanSetting, getSecretSetting } from "@orchestration-ai/sdk/services";
 import {
   imapHostSettingKey,
   imapPortSettingKey,
@@ -58,7 +58,7 @@ export type EmailListFilters = {
 export function getImapCredentials(settings: Setting[]): ImapCredentials | null {
   const host = getTextSetting(settings, imapHostSettingKey);
   const user = getTextSetting(settings, imapUserSettingKey);
-  const password = getTextSetting(settings, imapPasswordSettingKey);
+  const password = getSecretSetting(settings, imapPasswordSettingKey);
   if (!host || !user || !password) return null;
   return {
     host,

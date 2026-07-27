@@ -48,9 +48,7 @@ export async function handleMailConfigInit(req: Request, res: Response): Promise
       },
     });
     const settings = data!.settings! as Setting[];
-    console.log(settings);
     res.json({
-      layerId: context.identity.layerId,
       settings: {
         smtpHost: getTextSetting(settings, smtpHostSettingKey) ?? "",
         smtpPort: getTextSetting(settings, smtpPortSettingKey) ?? "",
@@ -71,10 +69,15 @@ export async function handleMailConfigInit(req: Request, res: Response): Promise
 
 // POST /services/mail/config/api/test-smtp
 export async function handleMailTestSmtp(req: Request, res: Response): Promise<void> {
-  const layerId = req.headers["x-layer-id"] as string;
-  if (!layerId) { res.status(401).send("Missing x-layer-id"); return; }
-
   try {
+    const passkey = req.body?.passkey as string;
+    if (!passkey) { res.status(400).send("Missing passkey"); return; }
+
+    const anonClient = createApiClient();
+    const { data: decrypted } = await authDecryptPasskey({ body: { passkey }, client: anonClient });
+    const layerId = decrypted?.data as string;
+    if (!layerId) { res.status(401).send("Invalid passkey"); return; }
+
     const context = await getContext(layerId);
     const apiClient = makeApiClient(context.identity.workspaceOwnerId);
     const { data } = await settingFindByAgent({
@@ -122,10 +125,15 @@ export async function handleMailTestSmtp(req: Request, res: Response): Promise<v
 
 // POST /services/mail/config/api/test-imap
 export async function handleMailTestImap(req: Request, res: Response): Promise<void> {
-  const layerId = req.headers["x-layer-id"] as string;
-  if (!layerId) { res.status(401).send("Missing x-layer-id"); return; }
-
   try {
+    const passkey = req.body?.passkey as string;
+    if (!passkey) { res.status(400).send("Missing passkey"); return; }
+
+    const anonClient = createApiClient();
+    const { data: decrypted } = await authDecryptPasskey({ body: { passkey }, client: anonClient });
+    const layerId = decrypted?.data as string;
+    if (!layerId) { res.status(401).send("Invalid passkey"); return; }
+
     const context = await getContext(layerId);
     const apiClient = makeApiClient(context.identity.workspaceOwnerId);
     const { data } = await settingFindByAgent({

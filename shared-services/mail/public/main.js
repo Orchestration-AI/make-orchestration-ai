@@ -7,7 +7,7 @@ if (passkey) {
   window.history.replaceState({}, document.title, clean.pathname + clean.search);
 }
 
-let _layerId = null;
+let _passkey = passkey;
 
 // --- Tabs ---
 document.querySelectorAll(".tab-btn").forEach((btn) => {
@@ -28,13 +28,14 @@ function setStatus(id, text, type = "") {
 
 // --- SMTP test ---
 document.getElementById("test-smtp-btn").addEventListener("click", async () => {
-  if (!_layerId) return;
+  if (!_passkey) return;
   setStatus("smtp-status", "Sending test email…");
   document.getElementById("test-smtp-btn").disabled = true;
   try {
     const res = await fetch("./api/test-smtp", {
       method: "POST",
-      headers: { "x-layer-id": _layerId },
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passkey: _passkey }),
     });
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.error ?? res.statusText);
@@ -48,13 +49,14 @@ document.getElementById("test-smtp-btn").addEventListener("click", async () => {
 
 // --- IMAP test ---
 document.getElementById("test-imap-btn").addEventListener("click", async () => {
-  if (!_layerId) return;
+  if (!_passkey) return;
   setStatus("imap-status", "Connecting…");
   document.getElementById("test-imap-btn").disabled = true;
   try {
     const res = await fetch("./api/test-imap", {
       method: "POST",
-      headers: { "x-layer-id": _layerId },
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passkey: _passkey }),
     });
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.error ?? res.statusText);
@@ -73,8 +75,7 @@ async function init() {
   try {
     const res = await fetch(`./api/init?passkey=${encodeURIComponent(passkey)}`);
     if (!res.ok) throw new Error(await res.text());
-    const { layerId, settings } = await res.json();
-    _layerId = layerId;
+    const { settings } = await res.json();
 
     // Populate SMTP card
     document.getElementById("smtp-host").textContent = settings.smtpHost || "(not set)";
