@@ -268,10 +268,10 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
     const sanitized = sanitizeCommand(command);
     if (sanitized !== command) console.log(`[oai-sandbox] Command sanitized for job ${jobId}: ${sanitized}`);
     // Pass command as a raw template literal string (not a substitution) to avoid escapeShellArg wrapping it in quotes
-    const result = await sandbox.sh(Object.assign([sanitized], { raw: [sanitized] })).sudo(true).stdout("piped").stderr("piped").text();
-    const exitCode = 0;
-    const stdout = result;
-    const stderr = "";
+    const result = await sandbox.sh(Object.assign([sanitized], { raw: [sanitized] })).sudo(true).stdout("piped").stderr("piped").output();
+    const exitCode = result.status.code;
+    const stdout = result.stdoutText ?? "";
+    const stderr = result.stderrText ?? "";
     console.log(`[oai-sandbox] Command finished for job ${jobId} (exit code: ${exitCode})`);
     if (stdout) console.log(`[oai-sandbox] stdout for job ${jobId}:
 ${stdout}`);
@@ -283,8 +283,9 @@ ${stderr}`);
   } catch (err) {
     console.warn(`[oai-sandbox] Job ${jobId} execution error:`, err);
     const exitCode = (err as { code?: number }).code ?? 1;
-    const stderr = String(err);
-    await finalizeJob(jobId, sessionId, exitCode, "", stderr, sandbox, apiClient, reconnect);
+    const stdout = (err as { stdout?: string }).stdout ?? "";
+    const stderr = (err as { stderr?: string }).stderr ?? String(err);
+    await finalizeJob(jobId, sessionId, exitCode, stdout, stderr, sandbox, apiClient, reconnect);
   }
 }
 
