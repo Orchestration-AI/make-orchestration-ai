@@ -38,12 +38,12 @@ export async function getSandboxDescription(
     {
       path: "create_session",
       method: "POST",
-      description: `Part of OAI Sandbox. Creates a new sandbox session and returns a sessionId. Optionally attach a volume mount to sync OAI Files into the VM before each job and back after. Available mount scopes: ${scopeList}. IMPORTANT: Only the mounted directory is guaranteed to persist state between jobs - the rest of the VM filesystem is ephemeral and may be reset between runs. If you install tools or download files that you want to reuse across jobs, place them inside the mounted directory.`,
+      description: `Part of OAI Sandbox. Creates a sandbox session and returns a sessionId. Optionally mount an OAI Files directory to sync files into the VM before each job and back out after. Available mount scopes: ${scopeList}. Only the mounted directory persists between jobs — everything else is ephemeral.`,
       parameters: {
         mount_scope: {
           type: "string",
           optional: true,
-          description: `Scope of the OAI Files to mount. One of: ${scopeList}.`,
+          description: `OAI Files scope to mount. One of: ${scopeList}.`,
         },
         mount_remote_path: {
           type: "string",
@@ -53,23 +53,23 @@ export async function getSandboxDescription(
         mount_local_path: {
           type: "string",
           optional: true,
-          description: "Absolute or relative path inside the VM where files will be mounted (e.g. '/data/workspace'). This is the only directory guaranteed to persist between jobs.",
+          description: "Absolute path in the VM where files will be mounted (e.g. '/data/workspace'). Only this directory persists between jobs.",
         },
       },
     },
     {
       path: "run_command",
       method: "POST",
-      description: "Part of OAI Sandbox. Enqueues a shell command to run in a Linux VM for the given session. Returns a jobId immediately - the command runs asynchronously and you will receive a ticker notification when it completes. IMPORTANT: After calling run_command, immediately inform the user that the job has been queued and end your response - do not call run_command again or continue iterating. The ticker notification will arrive as a new user message when the job completes; resume work at that point. Queueing multiple jobs simultaneously leads to unpredictable state. Jobs have a hard timeout of 30 minutes - at 30 minutes the VM is forcibly terminated regardless of what is running. Plan long-running work accordingly and break it into smaller jobs if needed. When a job finishes (or is terminated), upsync runs automatically - any files written to the mounted directory are synced back to OAI Files before the ticker notification is sent, so you do not need to manually upload results. Only the mounted directory is synced; files written elsewhere in the VM are lost when the job ends.",
+      description: "Part of OAI Sandbox. Enqueues a shell command to run in a Linux VM. Returns a jobId immediately — the command runs asynchronously. After calling run_command, tell the user the job is queued and stop. Do not call run_command again until you receive the ticker notification (it arrives as a new user message when the job completes). The command is run as: bash -c '<your command>' — do not prefix it with bash or bash -c yourself. Jobs time out after 30 minutes. On completion, files in the mounted directory are automatically synced back to OAI Files.",
       parameters: {
-        session_id: { type: "string", optional: false, description: "Session ID returned by create_session." },
-        command: { type: "string", optional: false, description: "Shell command to execute in the VM. This value will be passed to bash via the -c argument. Write any output files you want to keep to the mounted directory so they are automatically upsynced on completion." },
+        session_id: { type: "string", optional: false, description: "Session ID from create_session." },
+        command: { type: "string", optional: false, description: "The command to run. Do not wrap it in bash or bash -c — it is already run as bash -c '<command>'. Write output files to the mounted directory so they are synced back automatically." },
       },
     },
     {
       path: "end_session",
       method: "POST",
-      description: "Part of OAI Sandbox. Ends a session and destroys its local volume mount state. Call this when you are done with a session to free resources. Ensure any important files have been written to the mounted directory before ending - upsync only runs automatically at job completion, not at session end.",
+      description: "Part of OAI Sandbox. Ends a session and cleans up its resources. Call this when you are done. Make sure any files you need are in the mounted directory before ending — upsync only runs at job completion, not at session end.",
       parameters: {
         session_id: { type: "string", optional: false, description: "Session ID to end." },
       },
