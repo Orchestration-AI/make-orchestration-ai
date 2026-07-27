@@ -3,7 +3,7 @@ import showdown from "showdown";
 import type { Setting } from "@orchestration-ai/sdk/services";
 import { getBooleanSetting, getTextSetting } from "@orchestration-ai/sdk/services";
 import { storageDownloadFileAgent } from "@orchestration-ai/sdk/sdk.gen";
-import type { Client } from "@orchestration-ai/sdk/app-builder";
+import { getSecretSetting, type Client } from "@orchestration-ai/sdk/app-builder";
 import {
   smtpHostSettingKey,
   smtpPortSettingKey,
@@ -21,7 +21,7 @@ export function getMailerTransport(settings: Setting[]) {
     secure: getBooleanSetting(settings, smtpSecureSettingKey),
     auth: {
       user: getTextSetting(settings, smtpUserSettingKey),
-      pass: getTextSetting(settings, smtpPasswordSettingKey),
+      pass: getSecretSetting(settings, smtpPasswordSettingKey) ?? getTextSetting(settings, smtpPasswordSettingKey),
     },
   };
 }
