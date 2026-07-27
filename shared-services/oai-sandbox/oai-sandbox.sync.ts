@@ -3,19 +3,22 @@ import type { Client } from "@orchestration-ai/sdk/app-builder";
 
 // Use a structural interface to avoid npm vs JSR Sandbox type identity mismatch
 interface SandboxCommandBuilder {
+  signal(s: AbortSignal): SandboxCommandBuilder;
   noThrow(): SandboxCommandBuilder;
   text(): Promise<string>;
+}
+interface SandboxFs {
+  mkdir(path: string, options?: { recursive?: boolean; signal?: AbortSignal }): Promise<void>;
+  writeFile(path: string, data: Uint8Array<ArrayBuffer> | ReadableStream<Uint8Array>, options?: { signal?: AbortSignal }): Promise<void>;
+  readFile(path: string, options?: { signal?: AbortSignal }): Promise<Uint8Array<ArrayBuffer>>;
+  readDir(path: string): AsyncIterable<{ name: string; isFile: boolean; isDirectory: boolean; isSymlink: boolean }>;
+  stat(path: string, options?: { signal?: AbortSignal }): Promise<{ mtime: Date | null; mode: number }>;
+  walk(path: string): AsyncIterableIterator<{ path: string; name: string; isFile: boolean; isDirectory: boolean; isSymlink: boolean }>;
 }
 interface SandboxLike {
   readonly closed: Promise<void>;
   sh(strings: TemplateStringsArray, ...values: unknown[]): SandboxCommandBuilder;
-  fs: {
-    mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
-    writeFile(path: string, data: Uint8Array<ArrayBuffer> | ReadableStream<Uint8Array>): Promise<void>;
-    readFile(path: string): Promise<Uint8Array<ArrayBuffer>>;
-    readDir(path: string): AsyncIterable<{ name: string; isFile: boolean; isDirectory: boolean; isSymlink: boolean }>;
-    stat(path: string): Promise<{ mtime: Date | null }>;
-  };
+  fs: SandboxFs;
 }
 
 // Returns a fresh sandbox connection, or throws if the sandbox has been killed.
@@ -27,6 +30,38 @@ async function isDisconnected(sandbox: SandboxLike): Promise<boolean> {
 }
 
 export type SandboxReconnectFn = () => Promise<SandboxLike>;
+
+// Timeout constants (ms)
+const OP_TIMEOUT_MS = 30_000;  // per sandbox RPC op (mkdir, writeFile, readFile, stat)
+const FETCH_TIMEOUT_MS = 60_000*2; // per HTTP fetch (download/upload)
+const RECONNECT_TIMEOUT_MS = 20_000; // Sandbox.connect timeout
+
+// Wraps a promise with a timeout and begin/end logs. Throws if the timeout fires first.
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  console.log(`[oai-sandbox:sync] ${label} started (timeout: ${ms}ms)`);
+  try {
+    const result = await Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout after ${ms}ms: ${label}`)), ms)
+      ),
+    ]);
+    console.log(`[oai-sandbox:sync] ${label} done`);
+    return result;
+  } catch (err) {
+    console.error(`[oai-sandbox:sync] ${label} failed: ${err}`);
+    throw err;
+  }
+}
+
+// Ensures sandbox is connected, reconnecting if disconnected but not killed.
+// Throws if reconnect itself times out or sandbox is killed.
+async function ensureConnected(sandbox: SandboxLike, reconnect?: SandboxReconnectFn, label?: string): Promise<SandboxLike> {
+  if (!reconnect || !await isDisconnected(sandbox)) return sandbox;
+  console.log(`[oai-sandbox:sync] Connection lost${label ? ` (${label})` : ""}, reconnecting...`);
+  return await withTimeout(reconnect(), RECONNECT_TIMEOUT_MS, "reconnect");
+}
+
 import {
   storageListDirAgent, storageListDirOrch, storageListDirWorkspace,
   storageFileMetadataAgent, storageFileMetadataOrch, storageFileMetadataWorkspace,
@@ -158,10 +193,8 @@ export async function downsync(sessionId: string, mount: MountConfig, sandbox: S
   let skipped = 0;
 
   for (const remoteFile of remoteFiles) {
-    if (reconnect && await isDisconnected(sandbox)) {
-      console.log(`[oai-sandbox:sync] Connection lost during downsync, reconnecting...`);
-      sandbox = await reconnect();
-    }
+    sandbox = await ensureConnected(sandbox, reconnect, `downsync ${remoteFile}`);
+
     const meta = await getMetadata(mount.scope, remoteFile, context, apiClient);
     const remoteLastModified = meta?.updated_at ?? "";
 
@@ -179,7 +212,11 @@ export async function downsync(sessionId: string, mount: MountConfig, sandbox: S
       continue;
     }
 
-    const res = await fetch(downloadUrl);
+    const res = await withTimeout(
+      fetch(downloadUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }),
+      FETCH_TIMEOUT_MS,
+      `download ${remoteFile}`
+    );
     if (!res.ok) {
       console.warn(`[oai-sandbox:sync] Failed to download ${remoteFile}: HTTP ${res.status} - skipping`);
       continue;
@@ -191,13 +228,15 @@ export async function downsync(sessionId: string, mount: MountConfig, sandbox: S
     const vmPath = `${mount.local_path}/${relativePath}`;
     const parentDir = vmPath.substring(0, vmPath.lastIndexOf("/"));
 
-    await sandbox.fs.mkdir(parentDir, { recursive: true });
+    const opSignal = AbortSignal.timeout(OP_TIMEOUT_MS);
+    await withTimeout(sandbox.fs.mkdir(parentDir, { recursive: true }), OP_TIMEOUT_MS, `mkdir ${parentDir}`);
     const bytes = new Uint8Array(await res.arrayBuffer());
-    await sandbox.fs.writeFile(vmPath, bytes);
+    await withTimeout(sandbox.fs.writeFile(vmPath, bytes, { signal: opSignal }), OP_TIMEOUT_MS, `writeFile ${vmPath}`);
 
     const storedMode = cached.value?.mode;
     if (storedMode) {
-      await sandbox.sh`chmod ${storedMode} ${vmPath}`.noThrow().text();
+      const chmodSignal = AbortSignal.timeout(OP_TIMEOUT_MS);
+      await sandbox.sh(Object.assign([`chmod ${storedMode} ${vmPath}`], { raw: [`chmod ${storedMode} ${vmPath}`] })).signal(chmodSignal).noThrow().text();
       console.log(`[oai-sandbox:sync] Restored mode ${storedMode} on VM:${vmPath}`);
     }
     console.log(`[oai-sandbox:sync] Downsynced ${remoteFile} → VM:${vmPath} (${bytes.length} bytes)`);
@@ -213,7 +252,7 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
   console.log(`[oai-sandbox:sync] Upsync started for session ${sessionId}: VM:${mount.local_path} → ${mount.scope}:${mount.remote_path}`);
 
   try {
-    await sandbox.fs.stat(mount.local_path);
+    await withTimeout(sandbox.fs.stat(mount.local_path), OP_TIMEOUT_MS, `stat ${mount.local_path}`);
   } catch {
     console.log(`[oai-sandbox:sync] Mount dir VM:${mount.local_path} does not exist - nothing to upsync`);
     return;
@@ -222,62 +261,64 @@ export async function upsync(sessionId: string, mount: MountConfig, sandbox: San
   let synced = 0;
   let skipped = 0;
 
-  async function walkAndUpload(vmDir: string, remoteBase: string): Promise<void> {
-    for await (const entry of sandbox.fs.readDir(vmDir)) {
-      const vmPath = `${vmDir}/${entry.name}`;
-      const remotePath = `${remoteBase}/${entry.name}`;
+  // Use fs.walk for a single streaming RPC instead of recursive readDir calls.
+  // Each iteration yields a file entry with its full path.
+  for await (const entry of sandbox.fs.walk(mount.local_path)) {
+    if (!entry.isFile) continue;
 
-      if (entry.isDirectory) {
-        await walkAndUpload(vmPath, remotePath);
-        continue;
-      }
+    const vmPath = entry.path;
+    const relativePath = vmPath.startsWith(mount.local_path)
+      ? vmPath.slice(mount.local_path.length).replace(/^\//, "")
+      : vmPath;
+    const remotePath = `${mount.remote_path}/${relativePath}`;
 
-      if (reconnect && await isDisconnected(sandbox)) {
-        console.log(`[oai-sandbox:sync] Connection lost during upsync, reconnecting...`);
-        sandbox = await reconnect();
-      }
-      const stat = await sandbox.fs.stat(vmPath);
-      const localMtime = stat.mtime?.toISOString() ?? "";
+    sandbox = await ensureConnected(sandbox, reconnect, `upsync ${vmPath}`);
 
-      const syncKey = ["sandbox_sync", sessionId, remotePath];
-      const cached = await kv.get<SyncState>(syncKey);
+    const stat = await withTimeout(sandbox.fs.stat(vmPath), OP_TIMEOUT_MS, `stat ${vmPath}`);
+    const localMtime = stat.mtime?.toISOString() ?? "";
 
-      if (cached.value?.lastModified === localMtime && localMtime !== "") {
-        skipped++;
-        continue;
-      }
+    const syncKey = ["sandbox_sync", sessionId, remotePath];
+    const cached = await kv.get<SyncState>(syncKey);
 
-      const modeRaw = await sandbox.sh`stat -c '%a' ${vmPath}`.noThrow().text();
-      const mode = modeRaw.trim() || undefined;
+    if (cached.value?.lastModified === localMtime && localMtime !== "") {
+      skipped++;
+      continue;
+    }
 
-      const contentType = inferContentType(vmPath);
-      const uploadData = await getUploadUrl(mount.scope, remotePath, contentType, context, apiClient);
-      if (!uploadData?.upload_url) {
-        console.warn(`[oai-sandbox:sync] No upload URL for ${remotePath} - skipping`);
-        continue;
-      }
+    // Extract mode from stat.mode bitmask — avoids a separate sh`stat` RPC call
+    const mode = stat.mode ? (stat.mode & 0o777).toString(8) : undefined;
 
-      const bytes = await sandbox.fs.readFile(vmPath);
-      const res = await fetch(uploadData.upload_url, {
+    const contentType = inferContentType(vmPath);
+    const uploadData = await getUploadUrl(mount.scope, remotePath, contentType, context, apiClient);
+    if (!uploadData?.upload_url) {
+      console.warn(`[oai-sandbox:sync] No upload URL for ${remotePath} - skipping`);
+      continue;
+    }
+
+    const bytes = await withTimeout(sandbox.fs.readFile(vmPath, { signal: AbortSignal.timeout(OP_TIMEOUT_MS) }), OP_TIMEOUT_MS, `readFile ${vmPath}`);
+    const res = await withTimeout(
+      fetch(uploadData.upload_url, {
         method: "PUT",
         body: bytes.buffer as ArrayBuffer,
         headers: {
           "Content-Type": contentType,
           "x-goog-content-length-range": `0,${uploadData.max_size_bytes ?? 104857600}`,
         },
-      });
-      if (!res.ok) {
-        console.warn(`[oai-sandbox:sync] Failed to upload ${remotePath}: HTTP ${res.status} - skipping`);
-        continue;
-      }
-
-      console.log(`[oai-sandbox:sync] Upsynced VM:${vmPath} → ${remotePath} (${bytes.length} bytes)`);
-      await kv.set(syncKey, { lastModified: localMtime, mode } satisfies SyncState);
-      synced++;
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      }),
+      FETCH_TIMEOUT_MS,
+      `upload ${remotePath}`
+    );
+    if (!res.ok) {
+      console.warn(`[oai-sandbox:sync] Failed to upload ${remotePath}: HTTP ${res.status} - skipping`);
+      continue;
     }
+
+    console.log(`[oai-sandbox:sync] Upsynced VM:${vmPath} → ${remotePath} (${bytes.length} bytes)`);
+    await kv.set(syncKey, { lastModified: localMtime, mode } satisfies SyncState);
+    synced++;
   }
 
-  await walkAndUpload(mount.local_path, mount.remote_path);
   console.log(`[oai-sandbox:sync] Upsync complete for session ${sessionId}: ${synced} synced, ${skipped} skipped (up to date)`);
 }
 
