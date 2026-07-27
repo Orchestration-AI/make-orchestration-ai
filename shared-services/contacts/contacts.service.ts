@@ -5,7 +5,7 @@ import type { Setting } from "@orchestration-ai/sdk/services";
 import { sendMessages } from "@orchestration-ai/sdk/services";
 import { readContacts, writeContacts } from "./contacts.storage.ts";
 import type { Contact, ContactMember } from "./contacts.storage.ts";
-import { asyncMessagingSettingKey } from "../messages/messaging.constants.ts";
+import { asyncMessagingSettingKey } from "./contacts.constants.ts";
 
 function crypto_uuid(): string {
   return crypto.randomUUID();
@@ -170,7 +170,7 @@ export async function messageContact(
 export async function messageGroup(
   body: { id: string; message: string },
   context: Context,
-  engineClient: Client,
+  _engineClient: Client,
   apiClient: Client,
 ) {
   const contacts = await readContacts(context, apiClient);
