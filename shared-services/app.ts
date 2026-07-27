@@ -59,8 +59,8 @@ const app = createApp()
   .service(oaiFilesService)
   .service(multimediaService)
   .service(internetService)
-  .service(timeService)
-  .service(oaiSandboxService);
+  .service(timeService);
+  // .service(oaiSandboxService);
 
 // Custom: mail zapier webhook (receives emails from Zapier)
 app.expressApp.post(
