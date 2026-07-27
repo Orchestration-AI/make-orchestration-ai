@@ -9,6 +9,14 @@ import { registerMailAgent } from "./mail.kv.ts";
 import { getImapCredentials, fetchList, fetchThread, fetchMessage, markThreadSeen, markMessageSeen } from "./imap.proxy.ts";
 import { getTextSetting } from "@orchestration-ai/sdk/services";
 import { storeAttachments } from "./mail.attachments.ts";
+import PostalMime from "postal-mime";
+
+async function extractPlainText(raw: string): Promise<string> {
+  const BODY_LIMIT = +(process.env.MAIL_BODY_MAX_CHARS || 20 * 1024);
+  const parsed = await new PostalMime().parse(raw);
+  const text = parsed.text ?? parsed.html?.replace(/<[^>]+>/g, " ").replace(/\s{2,}/g, " ").trim() ?? raw;
+  return text.length > BODY_LIMIT ? text.slice(0, BODY_LIMIT) + "\n\n[Body truncated: content exceeds " + BODY_LIMIT + " characters]" : text;
+}
 
 export const mailService = defineServiceWithDynamicDescription({
   unique_name: "mail",
@@ -161,7 +169,7 @@ export const mailService = defineServiceWithDynamicDescription({
                 apiClient,
               )
             : [];
-          stored.push({ ...msg, attachments });
+          stored.push({ ...msg, body: await extractPlainText(msg.body), attachments });
         }
         await markThreadSeen(credentials, body.threadId);
         return stored;
@@ -181,7 +189,8 @@ export const mailService = defineServiceWithDynamicDescription({
             )
           : [];
         await markMessageSeen(credentials, body.uid);
-        return { ...msg, attachments };
+        const result = { ...msg, body: await extractPlainText(msg.body), attachments };
+        return result;
       }
 
       return "Provide either threadId or uid.";

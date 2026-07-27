@@ -16,6 +16,7 @@
     "npm:mathjs@^15.1.0": "15.1.0",
     "npm:mssql@^11.0.1": "11.0.1",
     "npm:nodemailer@^6.9.16": "6.9.16",
+    "npm:postal-mime@^2.7.5": "2.7.5",
     "npm:showdown@^2.1.0": "2.1.0",
     "npm:socket.io@^4.8.1": "4.8.1"
   },
@@ -1311,6 +1312,9 @@
         "@napi-rs/canvas"
       ]
     },
+    "postal-mime@2.7.5": {
+      "integrity": "sha512-GNEXKvWFQnbgO5NlrGzVa0FmWzBZ24PersAWErttSg1Hjpf0ATxTwS5DOMGaOpTG6bUh5cTr7xi0jAD942wCJA=="
+    },
     "process-nextick-args@2.0.1": {
       "integrity": "sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag=="
     },
@@ -1711,6 +1715,7 @@
       "npm:mathjs@^15.1.0",
       "npm:mssql@^11.0.1",
       "npm:nodemailer@^6.9.16",
+      "npm:postal-mime@^2.7.5",
       "npm:showdown@^2.1.0",
       "npm:socket.io@^4.8.1"
     ]
