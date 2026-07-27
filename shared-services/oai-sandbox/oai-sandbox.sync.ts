@@ -236,8 +236,9 @@ export async function downsync(sessionId: string, mount: MountConfig, sandbox: S
     const storedMode = cached.value?.mode;
     if (storedMode) {
       const chmodSignal = AbortSignal.timeout(OP_TIMEOUT_MS);
-      await sandbox.sh(Object.assign([`chmod ${storedMode} ${vmPath}`], { raw: [`chmod ${storedMode} ${vmPath}`] })).signal(chmodSignal).noThrow().text();
-      console.log(`[oai-sandbox:sync] Restored mode ${storedMode} on VM:${vmPath}`);
+      await sandbox.sh(Object.assign([`chmod ${storedMode} ${vmPath}`], { raw: [`chmod ${storedMode} ${vmPath}`] })).signal(chmodSignal).text()
+        .then(() => console.log(`[oai-sandbox:sync] Restored mode ${storedMode} on VM:${vmPath}`))
+        .catch((err) => console.warn(`[oai-sandbox:sync] Failed to restore mode ${storedMode} on VM:${vmPath}: ${err}`));
     }
     console.log(`[oai-sandbox:sync] Downsynced ${remoteFile} → VM:${vmPath} (${bytes.length} bytes)`);
 
