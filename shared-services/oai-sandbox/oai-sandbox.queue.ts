@@ -273,7 +273,7 @@ async function processJob(jobId: string, sessionId: string, command: string): Pr
     const sanitized = sanitizeCommand(command);
     if (sanitized !== command) console.log(`[oai-sandbox] Command sanitized for job ${jobId}: ${sanitized}`);
     // Pass command as a raw template literal string (not a substitution) to avoid escapeShellArg wrapping it in quotes
-    const result = await sandbox.sh(Object.assign([sanitized], { raw: [sanitized] })).stdout("piped").stderr("piped").text();
+    const result = await sandbox.sh(Object.assign([sanitized], { raw: [sanitized] })).sudo(true).stdout("piped").stderr("piped").text();
     const exitCode = 0;
     const stdout = result;
     const stderr = "";
