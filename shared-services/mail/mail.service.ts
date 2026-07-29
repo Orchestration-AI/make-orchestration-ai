@@ -27,7 +27,7 @@ export function getMailerTransport(settings: Setting[]) {
   };
 }
 
-type MailAttachment = { filename: string; content: string; contentType: string };
+type MailAttachment = { filename: string; content: string; contentType: string; encoding: string };
 
 async function resolveAttachments(
   attachmentPaths: string[],
@@ -37,6 +37,7 @@ async function resolveAttachments(
   apiClient: Client,
 ): Promise<MailAttachment[]> {
   const result: MailAttachment[] = [];
+  console.log(`[mail:attachments] Resolving ${attachmentPaths.length} attachment(s):`, attachmentPaths);
   for (const storagePath of attachmentPaths) {
     try {
       const { data } = await storageDownloadFileAgent({
@@ -45,18 +46,31 @@ async function resolveAttachments(
         query: { path: storagePath },
       });
       const downloadUrl = (data as { download_url?: string })?.download_url;
-      if (!downloadUrl) continue;
+      if (!downloadUrl) {
+        console.warn(`[mail:attachments] No download URL returned for ${storagePath}`);
+        continue;
+      }
       const res = await fetch(downloadUrl);
-      if (!res.ok) continue;
+      if (!res.ok) {
+        console.warn(`[mail:attachments] Download failed for ${storagePath}: ${res.status} ${res.statusText}`);
+        continue;
+      }
       const bytes = new Uint8Array(await res.arrayBuffer());
-      const base64 = btoa(String.fromCharCode(...bytes));
+      let binary = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.byteLength; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      const base64 = btoa(binary);
       const filename = storagePath.split("/").pop() ?? "attachment";
       const contentType = res.headers.get("content-type") ?? "application/octet-stream";
-      result.push({ filename, content: base64, contentType });
+      console.log(`[mail:attachments] Resolved ${storagePath} -> ${filename} (${contentType}, ${bytes.byteLength} bytes)`);
+      result.push({ filename, content: base64, contentType, encoding: "base64" });
     } catch (err) {
       console.warn(`[mail:attachments] Failed to resolve attachment ${storagePath}:`, err);
     }
   }
+  console.log(`[mail:attachments] ${result.length}/${attachmentPaths.length} attachment(s) resolved successfully`);
   return result;
 }
 
@@ -178,6 +192,14 @@ async function sendMailWithContent(
   let attachments: MailAttachment[] | undefined;
   if (attachmentPaths?.length && workspaceId && orchestrationId && agentId && apiClient) {
     attachments = await resolveAttachments(attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
+  } else if (attachmentPaths?.length) {
+    const missing = [
+      !workspaceId && "workspaceId",
+      !orchestrationId && "orchestrationId",
+      !agentId && "agentId",
+      !apiClient && "apiClient",
+    ].filter(Boolean);
+    console.warn(`[mail] Skipping attachment resolution - missing: ${missing.join(", ")}`);
   }
   return sendMail(finalHtml, finalText, to, cc, bcc, subject, settings, sessionId, attachments);
 }
