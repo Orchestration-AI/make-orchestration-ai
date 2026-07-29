@@ -37,26 +37,37 @@ async function resolveAttachments(
   apiClient: Client,
 ): Promise<MailAttachment[]> {
   const result: MailAttachment[] = [];
+  console.log(`[mail:attachments] Resolving ${attachmentPaths.length} attachment(s):`, attachmentPaths);
   for (const storagePath of attachmentPaths) {
     try {
+      console.log(`[mail:attachments] Fetching download URL for ${storagePath}`);
       const { data } = await storageDownloadFileAgent({
         client: apiClient,
         path: { workspaceId, orchestrationId, agentId },
         query: { path: storagePath },
       });
       const downloadUrl = (data as { download_url?: string })?.download_url;
-      if (!downloadUrl) continue;
+      if (!downloadUrl) {
+        console.warn(`[mail:attachments] No download URL returned for ${storagePath}`);
+        continue;
+      }
+      console.log(`[mail:attachments] Downloading ${storagePath}`);
       const res = await fetch(downloadUrl);
-      if (!res.ok) continue;
+      if (!res.ok) {
+        console.warn(`[mail:attachments] Download failed for ${storagePath}: ${res.status} ${res.statusText}`);
+        continue;
+      }
       const bytes = new Uint8Array(await res.arrayBuffer());
       const base64 = btoa(String.fromCharCode(...bytes));
       const filename = storagePath.split("/").pop() ?? "attachment";
       const contentType = res.headers.get("content-type") ?? "application/octet-stream";
+      console.log(`[mail:attachments] Resolved ${storagePath} -> ${filename} (${contentType}, ${bytes.byteLength} bytes)`);
       result.push({ filename, content: base64, contentType });
     } catch (err) {
       console.warn(`[mail:attachments] Failed to resolve attachment ${storagePath}:`, err);
     }
   }
+  console.log(`[mail:attachments] ${result.length}/${attachmentPaths.length} attachment(s) resolved successfully`);
   return result;
 }
 

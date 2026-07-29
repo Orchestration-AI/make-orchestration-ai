@@ -30,7 +30,7 @@ export async function getDescriptionForContext(context: Context, _engineClient: 
         to: { type: "string", optional: false, description: "Comma-separated recipient addresses for the To field." },
         cc: { type: "string", optional: true, description: "Comma-separated recipient addresses for the Cc field." },
         bcc: { type: "string", optional: true, description: "Comma-separated recipient addresses for the Bcc field." },
-        attachments: { type: "string", optional: true, description: "Comma-separated OAI storage paths of files to attach." },
+        attachments: { type: "string", optional: true, description: "Comma-separated OAI files paths of files to attach." },
       },
     });
     tools.push({
@@ -43,7 +43,7 @@ export async function getDescriptionForContext(context: Context, _engineClient: 
         to: { type: "string", optional: false, description: "Comma-separated recipient addresses for the To field." },
         cc: { type: "string", optional: true, description: "Comma-separated recipient addresses for the Cc field." },
         bcc: { type: "string", optional: true, description: "Comma-separated recipient addresses for the Bcc field." },
-        attachments: { type: "string", optional: true, description: "Comma-separated OAI storage paths of files to attach." },
+        attachments: { type: "string", optional: true, description: "Comma-separated OAI files paths of files to attach." },
       },
     });
   }
@@ -56,7 +56,7 @@ export async function getDescriptionForContext(context: Context, _engineClient: 
       parameters: {
         threadId: { type: "string", optional: false, description: "The thread ID to reply to." },
         body: { type: "string", optional: false, description: "The reply body in markdown." },
-        attachments: { type: "string", optional: true, description: "Comma-separated OAI storage paths of files to attach." },
+        attachments: { type: "string", optional: true, description: "Comma-separated OAI files paths of files to attach." },
       },
     });
     tools.push({
@@ -76,7 +76,7 @@ export async function getDescriptionForContext(context: Context, _engineClient: 
     tools.push({
       path: "get_email",
       method: "POST",
-      description: "Fetch a full email thread or a single message by UID. Attachments are stored in OAI storage and their paths are returned.",
+      description: "Fetch a full email thread or a single message by UID. Attachments are stored in OAI files and their paths are returned.",
       parameters: {
         threadId: { type: "string", optional: true, description: "The thread ID to fetch all messages in the thread." },
         uid: { type: "string", optional: true, description: "The UID of a specific message to fetch." },
