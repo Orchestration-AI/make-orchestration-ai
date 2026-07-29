@@ -7,6 +7,8 @@ export const smtpPasswordSettingKey = "SMTP_PASSWORD";
 export const smtpSecureSettingKey = "SMTP_SECURE";
 export const smtpSelfEmailSettingKey = "SMTP_SELF_EMAIL";
 export const autoSendSettingKey = "AUTO_SEND";
+export const bodyMaxCharsSettingKey = "BODY_MAX_CHARS";
+export const mailFooterSettingKey = "MAIL_FOOTER";
 
 export const imapHostSettingKey = "IMAP_HOST";
 export const imapPortSettingKey = "IMAP_PORT";
@@ -54,6 +56,12 @@ export const defaultSettings: Setting[] = [
     text_value: "",
   },
   {
+    setting_name: bodyMaxCharsSettingKey,
+    setting_description: "Maximum number of characters returned to the LLM per tool response. Keep this low to avoid filling the LLM context window.",
+    setting_type: "Text",
+    text_value: "20480",
+  },
+  {
     setting_name: autoSendSettingKey,
     setting_description:
       "When true, the agent can autonomously send emails. When false, the agent can only reply to emails.",
@@ -89,5 +97,11 @@ export const defaultSettings: Setting[] = [
     setting_description: "Whether to use TLS for the IMAP connection.",
     setting_type: "Boolean",
     boolean_value: true,
+  },
+  {
+    setting_name: mailFooterSettingKey,
+    setting_description: "Text appended to the bottom of every outbound email. Use this to inform recipients that the email was sent by an AI agent.",
+    setting_type: "Text",
+    text_value: "",
   },
 ];

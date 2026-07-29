@@ -11,6 +11,7 @@ import {
   smtpPasswordSettingKey,
   smtpSecureSettingKey,
   smtpSelfEmailSettingKey,
+  mailFooterSettingKey,
 } from "./mail.constants.ts";
 import { getRequiredEnvValue } from "../environment.ts";
 
@@ -171,9 +172,12 @@ async function sendMailWithContent(
   agentId?: string,
   apiClient?: Client,
 ) {
+  const footer = getTextSetting(settings, mailFooterSettingKey);
+  const finalHtml = footer ? `${html}<br><br>${footer}` : html;
+  const finalText = footer ? `${text}\n\n${footer}` : text;
   let attachments: MailAttachment[] | undefined;
   if (attachmentPaths?.length && workspaceId && orchestrationId && agentId && apiClient) {
     attachments = await resolveAttachments(attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
   }
-  return sendMail(html, text, to, cc, bcc, subject, settings, sessionId, attachments);
+  return sendMail(finalHtml, finalText, to, cc, bcc, subject, settings, sessionId, attachments);
 }

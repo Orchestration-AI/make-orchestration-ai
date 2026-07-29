@@ -1,8 +1,7 @@
 import { defineServiceWithDynamicDescription } from "@orchestration-ai/sdk/app-builder";
 import type { Context, Setting, Client } from "@orchestration-ai/sdk/app-builder";
 import { settingFindByAgent, linkCreate } from "@orchestration-ai/sdk/sdk.gen";
-import { defaultSettings, smtpSelfEmailSettingKey } from "./mail.constants.ts";
-import process from "node:process";
+import { defaultSettings, smtpSelfEmailSettingKey, bodyMaxCharsSettingKey } from "./mail.constants.ts";
 import { getDescriptionForContext } from "./mail.description.ts";
 import { sendMarkdownMail, sendHtmlMail, replyToThread } from "./mail.service.ts";
 import { registerMailAgent } from "./mail.kv.ts";
@@ -11,11 +10,10 @@ import { getTextSetting } from "@orchestration-ai/sdk/services";
 import { storeAttachments } from "./mail.attachments.ts";
 import PostalMime from "postal-mime";
 
-async function extractPlainText(raw: string): Promise<string> {
-  const BODY_LIMIT = +(process.env.MAIL_BODY_MAX_CHARS || 20 * 1024);
+async function extractPlainText(raw: string, bodyMaxChars: number): Promise<string> {
   const parsed = await new PostalMime().parse(raw);
   const text = parsed.text ?? parsed.html?.replace(/<[^>]+>/g, " ").replace(/\s{2,}/g, " ").trim() ?? raw;
-  return text.length > BODY_LIMIT ? text.slice(0, BODY_LIMIT) + "\n\n[Body truncated: content exceeds " + BODY_LIMIT + " characters]" : text;
+  return text.length > bodyMaxChars ? text.slice(0, bodyMaxChars) + "\n\n[Body truncated: content exceeds " + bodyMaxChars + " characters]" : text;
 }
 
 export const mailService = defineServiceWithDynamicDescription({
@@ -153,6 +151,7 @@ export const mailService = defineServiceWithDynamicDescription({
       });
       const credentials = getImapCredentials(data!.settings! as Setting[]);
       if (!credentials) return "IMAP is not configured.";
+      const bodyMaxChars = +(getTextSetting(data!.settings! as Setting[], bodyMaxCharsSettingKey) ?? 20 * 1024) || 20 * 1024;
 
       if (body.threadId) {
         const messages = await fetchThread(credentials, body.threadId);
@@ -169,7 +168,7 @@ export const mailService = defineServiceWithDynamicDescription({
                 apiClient,
               )
             : [];
-          stored.push({ ...msg, body: await extractPlainText(msg.body), attachments });
+          stored.push({ ...msg, body: await extractPlainText(msg.body, bodyMaxChars), attachments });
         }
         await markThreadSeen(credentials, body.threadId);
         return stored;
@@ -189,7 +188,7 @@ export const mailService = defineServiceWithDynamicDescription({
             )
           : [];
         await markMessageSeen(credentials, body.uid);
-        const result = { ...msg, body: await extractPlainText(msg.body), attachments };
+        const result = { ...msg, body: await extractPlainText(msg.body, bodyMaxChars), attachments };
         return result;
       }
 

@@ -7,7 +7,7 @@ const MAX_FILE_SIZE_BYTES = +(process.env.MULTIMEDIA_MAX_FILE_SIZE_BYTES || 1048
 
 const markitdown = new MarkItDown();
 
-export async function readFile(body: { url: string; file_type?: string }): Promise<{ markdown: string; truncated?: boolean; note?: string }> {
+export async function readFile(body: { url: string; file_type?: string; bodyMaxChars?: number }): Promise<{ markdown: string; truncated?: boolean; note?: string }> {
   const { url } = body;
 
   const response = await fetch(url);
@@ -61,12 +61,12 @@ export async function readFile(body: { url: string; file_type?: string }): Promi
 
   if (!result) throw new Error("markitdown-ts returned no result for the given file.");
 
-  const MARKDOWN_LIMIT = +(process.env.MAIL_BODY_MAX_CHARS || 20 * 1024);
-  if (result.markdown.length > MARKDOWN_LIMIT) {
+  const BODY_LIMIT = body.bodyMaxChars ?? (20 * 1024);
+  if (result.markdown.length > BODY_LIMIT) {
     return {
-      markdown: result.markdown.slice(0, MARKDOWN_LIMIT),
+      markdown: result.markdown.slice(0, BODY_LIMIT),
       truncated: true,
-      note: `Content was truncated to ${MARKDOWN_LIMIT} characters. The full file contains approximately ${result.markdown.length} characters.`,
+      note: `Content was truncated to ${BODY_LIMIT} characters. The full file contains approximately ${result.markdown.length} characters.`,
     };
   }
 
