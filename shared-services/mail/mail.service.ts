@@ -27,7 +27,7 @@ export function getMailerTransport(settings: Setting[]) {
   };
 }
 
-type MailAttachment = { filename: string; content: string; contentType: string };
+type MailAttachment = { filename: string; content: string; contentType: string; encoding: string };
 
 async function resolveAttachments(
   attachmentPaths: string[],
@@ -40,7 +40,6 @@ async function resolveAttachments(
   console.log(`[mail:attachments] Resolving ${attachmentPaths.length} attachment(s):`, attachmentPaths);
   for (const storagePath of attachmentPaths) {
     try {
-      console.log(`[mail:attachments] Fetching download URL for ${storagePath}`);
       const { data } = await storageDownloadFileAgent({
         client: apiClient,
         path: { workspaceId, orchestrationId, agentId },
@@ -51,18 +50,22 @@ async function resolveAttachments(
         console.warn(`[mail:attachments] No download URL returned for ${storagePath}`);
         continue;
       }
-      console.log(`[mail:attachments] Downloading ${storagePath}`);
       const res = await fetch(downloadUrl);
       if (!res.ok) {
         console.warn(`[mail:attachments] Download failed for ${storagePath}: ${res.status} ${res.statusText}`);
         continue;
       }
       const bytes = new Uint8Array(await res.arrayBuffer());
-      const base64 = btoa(String.fromCharCode(...bytes));
+      let binary = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.byteLength; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      const base64 = btoa(binary);
       const filename = storagePath.split("/").pop() ?? "attachment";
       const contentType = res.headers.get("content-type") ?? "application/octet-stream";
       console.log(`[mail:attachments] Resolved ${storagePath} -> ${filename} (${contentType}, ${bytes.byteLength} bytes)`);
-      result.push({ filename, content: base64, contentType });
+      result.push({ filename, content: base64, contentType, encoding: "base64" });
     } catch (err) {
       console.warn(`[mail:attachments] Failed to resolve attachment ${storagePath}:`, err);
     }
@@ -189,6 +192,14 @@ async function sendMailWithContent(
   let attachments: MailAttachment[] | undefined;
   if (attachmentPaths?.length && workspaceId && orchestrationId && agentId && apiClient) {
     attachments = await resolveAttachments(attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
+  } else if (attachmentPaths?.length) {
+    const missing = [
+      !workspaceId && "workspaceId",
+      !orchestrationId && "orchestrationId",
+      !agentId && "agentId",
+      !apiClient && "apiClient",
+    ].filter(Boolean);
+    console.warn(`[mail] Skipping attachment resolution - missing: ${missing.join(", ")}`);
   }
   return sendMail(finalHtml, finalText, to, cc, bcc, subject, settings, sessionId, attachments);
 }

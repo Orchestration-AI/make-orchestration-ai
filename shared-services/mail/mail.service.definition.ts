@@ -46,7 +46,7 @@ export const mailService = defineServiceWithDynamicDescription({
   },
   tools: {
     send_email: async (
-      body: { body: string; to: string; cc: string; bcc: string; subject: string; attachments?: string[] },
+      body: { body: string; to: string; cc: string; bcc: string; subject: string; attachments?: string },
       context: Context,
       _engineClient: Client,
       apiClient: Client,
@@ -67,7 +67,7 @@ export const mailService = defineServiceWithDynamicDescription({
         body.subject,
         data!.settings! as Setting[],
         context.sessionId,
-        body.attachments,
+        body.attachments?.split(",").map((p) => p.trim()).filter(Boolean),
         context.identity.workspaceId,
         context.identity.orchestrationId,
         context.identity.agentId,
@@ -77,7 +77,7 @@ export const mailService = defineServiceWithDynamicDescription({
     },
 
     send_html_email: async (
-      body: { html: string; to: string; cc: string; bcc: string; subject: string; attachments?: string[] },
+      body: { html: string; to: string; cc: string; bcc: string; subject: string; attachments?: string },
       context: Context,
       _engineClient: Client,
       apiClient: Client,
@@ -98,7 +98,7 @@ export const mailService = defineServiceWithDynamicDescription({
         body.subject,
         data!.settings! as Setting[],
         context.sessionId,
-        body.attachments,
+        body.attachments?.split(",").map((p) => p.trim()).filter(Boolean),
         context.identity.workspaceId,
         context.identity.orchestrationId,
         context.identity.agentId,
@@ -196,7 +196,7 @@ export const mailService = defineServiceWithDynamicDescription({
     },
 
     reply_to_email: async (
-      body: { threadId: string; body: string; attachments?: string[] },
+      body: { threadId: string; body: string; attachments?: string },
       context: Context,
       _engineClient: Client,
       apiClient: Client,
@@ -242,7 +242,7 @@ export const mailService = defineServiceWithDynamicDescription({
         subject,
         body.threadId,
         settings,
-        body.attachments,
+        body.attachments?.split(",").map((p) => p.trim()).filter(Boolean),
         context.identity.workspaceId,
         context.identity.orchestrationId,
         context.identity.agentId,
