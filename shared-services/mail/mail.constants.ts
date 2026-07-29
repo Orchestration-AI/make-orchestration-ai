@@ -7,6 +7,7 @@ export const smtpPasswordSettingKey = "SMTP_PASSWORD";
 export const smtpSecureSettingKey = "SMTP_SECURE";
 export const smtpSelfEmailSettingKey = "SMTP_SELF_EMAIL";
 export const autoSendSettingKey = "AUTO_SEND";
+export const bodyMaxCharsSettingKey = "BODY_MAX_CHARS";
 
 export const imapHostSettingKey = "IMAP_HOST";
 export const imapPortSettingKey = "IMAP_PORT";
@@ -52,6 +53,12 @@ export const defaultSettings: Setting[] = [
     setting_description: "The email address of the agent (used as the From address).",
     setting_type: "Text",
     text_value: "",
+  },
+  {
+    setting_name: bodyMaxCharsSettingKey,
+    setting_description: "Maximum number of characters returned to the LLM per tool response. Keep this low to avoid filling the LLM context window.",
+    setting_type: "Text",
+    text_value: "20480",
   },
   {
     setting_name: autoSendSettingKey,
