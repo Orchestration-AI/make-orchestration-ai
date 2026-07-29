@@ -18,7 +18,20 @@ export const timeService = defineService({
   service_description: "Provides the current time and operations for adding durations or calculating differences between datetimes.",
   description: timeServiceFunctions,
   tools: {
-    now: () => new Date().toISOString(),
+    now: () => {
+      const now = new Date();
+      const iso = now.toISOString();
+      const readable = now.toLocaleString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
+      });
+      return `${readable} (${iso})`;
+    },
 
     add: (body: { datetime: string; amount: number; unit: TimeUnit }) => {
       const ms = unitToMs[body.unit];
