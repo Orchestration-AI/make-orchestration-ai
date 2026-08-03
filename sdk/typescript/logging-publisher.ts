@@ -1,18 +1,15 @@
 import { io, Socket } from 'socket.io-client';
-import type { Client } from './client';
-import { authGeneratePasskey } from './sdk.gen';
 
 const DEFAULT_LOGGING_URL = 'https://oai-logging-21142163942.africa-south1.run.app';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-export type LoggingPublisherOptions = {
+export interface LoggingPublisherOptions {
+  /** The application's access key. */
+  accessKey: string;
   /** Override the logging service URL. Defaults to OAI_LOGGING_URL env var or the production URL. */
   url?: string;
-} & (
-  | { passkey: string; apiClient?: never }
-  | { apiClient: Client; passkey?: never }
-);
+}
 
 export interface LoggingPublisher {
   /** Publish a log message with an explicit level */
@@ -29,43 +26,23 @@ export function createLoggingPublisher(options: LoggingPublisherOptions): Loggin
     (typeof process !== 'undefined' ? process.env.OAI_LOGGING_URL : undefined) ??
     DEFAULT_LOGGING_URL;
 
-  let socket: Socket | null = null;
-  // Buffer logs emitted before the socket is ready
+  // Buffer logs emitted before the socket connects
   const buffer: Array<{ level: LogLevel; text: string }> = [];
 
-  async function connect(): Promise<void> {
-    let passkey: string;
+  const socket: Socket = io(`${url}/app`, {
+    auth: { accessKey: options.accessKey },
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+  });
 
-    if (options.apiClient) {
-      const res = await authGeneratePasskey({ client: options.apiClient });
-      const pk = (res.data as { passkey?: string })?.passkey;
-      if (!pk) throw new Error('Failed to generate passkey from API client');
-      passkey = pk;
-    } else {
-      passkey = options.passkey;
+  socket.on('connect', () => {
+    for (const entry of buffer.splice(0)) {
+      socket.emit('log', entry);
     }
-
-    socket = io(`${url}/app`, {
-      auth: { passkey },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-    });
-
-    socket.on('connect', () => {
-      // Flush buffered logs once connected
-      for (const entry of buffer.splice(0)) {
-        socket!.emit('log', entry);
-      }
-    });
-  }
-
-  // Kick off connection immediately — fire and forget
-  connect().catch(() => {
-    // Connection failure is silent; logs will remain buffered or be dropped
   });
 
   function log(level: LogLevel, text: string): void {
-    if (socket?.connected) {
+    if (socket.connected) {
       socket.emit('log', { level, text });
     } else {
       buffer.push({ level, text });
@@ -84,8 +61,7 @@ export function createLoggingPublisher(options: LoggingPublisherOptions): Loggin
   }
 
   function disconnect(): void {
-    socket?.disconnect();
-    socket = null;
+    socket.disconnect();
   }
 
   return { log, wrapConsole, disconnect };
