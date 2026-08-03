@@ -1,6 +1,6 @@
 {
   "name": "@orchestration-ai/sdk",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "TypeScript SDK for Orchestration AI - The Operating System for AI-Powered Businesses",
   "license": "MIT",
   "author": "Orchestration AI",
@@ -103,6 +103,26 @@
         "types": "./dist/cjs/streaming.d.ts",
         "default": "./dist/cjs/streaming.js"
       }
+    },
+    "./logging-publisher": {
+      "import": {
+        "types": "./dist/esm/logging-publisher.d.ts",
+        "default": "./dist/esm/logging-publisher.js"
+      },
+      "require": {
+        "types": "./dist/cjs/logging-publisher.d.ts",
+        "default": "./dist/cjs/logging-publisher.js"
+      }
+    },
+    "./logging-consumer": {
+      "import": {
+        "types": "./dist/esm/logging-consumer.d.ts",
+        "default": "./dist/esm/logging-consumer.js"
+      },
+      "require": {
+        "types": "./dist/cjs/logging-consumer.d.ts",
+        "default": "./dist/cjs/logging-consumer.js"
+      }
     }
   },
   "files": [
@@ -118,7 +138,8 @@
   },
   "dependencies": {
     "axios": "^1.7.0",
-    "express": "^5.0.0"
+    "express": "^5.0.0",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.97.1",
