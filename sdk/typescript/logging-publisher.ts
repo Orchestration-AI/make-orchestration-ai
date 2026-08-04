@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 const DEFAULT_LOGGING_URL = 'https://oai-logging-21142163942.africa-south1.run.app';
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = 'log' | 'debug' | 'info' | 'warn' | 'error';
 
 export interface LoggingPublisherOptions {
   /** The application's access key. */
@@ -38,13 +38,19 @@ export function createLoggingPublisher(options: LoggingPublisherOptions): Loggin
 
   socket.on('connect', () => {
     connected = true;
+    console.log(`[oai-publisher] socket connected, flushing buffer size=${buffer.length}`);
     for (const entry of buffer.splice(0)) {
       socket.emit('log', entry);
     }
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', (reason) => {
     connected = false;
+    console.log(`[oai-publisher] socket disconnected reason=${reason} buffer size=${buffer.length}`);
+  });
+
+  socket.on('connect_error', (err) => {
+    console.log(`[oai-publisher] connect_error: ${err.message}`);
   });
 
   function log(level: LogLevel, text: string): void {
@@ -56,12 +62,14 @@ export function createLoggingPublisher(options: LoggingPublisherOptions): Loggin
   }
 
   function wrapConsole(cons: Console): void {
-    const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
+    const levels: LogLevel[] = ['log', 'debug', 'info', 'warn', 'error'];
     for (const level of levels) {
       const original = cons[level].bind(cons);
       cons[level] = (...args: unknown[]) => {
         original(...args);
-        log(level, args.map(String).join(' '));
+        const text = args.map(String).join(' ');
+        original(`[oai-publisher] emitting level=${level} connected=${connected} text=${text}`);
+        log(level, text);
       };
     }
   }
