@@ -26,8 +26,9 @@ export function createLoggingPublisher(options: LoggingPublisherOptions): Loggin
     (typeof process !== 'undefined' ? process.env.OAI_LOGGING_URL : undefined) ??
     DEFAULT_LOGGING_URL;
 
-  // Buffer logs emitted before the socket connects
+  // Buffer logs emitted before the socket connects or while reconnecting
   const buffer: Array<{ level: LogLevel; text: string }> = [];
+  let connected = false;
 
   const socket: Socket = io(`${url}/app`, {
     auth: { accessKey: options.accessKey },
@@ -36,13 +37,18 @@ export function createLoggingPublisher(options: LoggingPublisherOptions): Loggin
   });
 
   socket.on('connect', () => {
+    connected = true;
     for (const entry of buffer.splice(0)) {
       socket.emit('log', entry);
     }
   });
 
+  socket.on('disconnect', () => {
+    connected = false;
+  });
+
   function log(level: LogLevel, text: string): void {
-    if (socket.connected) {
+    if (connected) {
       socket.emit('log', { level, text });
     } else {
       buffer.push({ level, text });
