@@ -67,7 +67,11 @@ export function createLoggingPublisher(options: LoggingPublisherOptions): Loggin
       const original = cons[level].bind(cons);
       cons[level] = (...args: unknown[]) => {
         original(...args);
-        const text = args.map(String).join(' ');
+        const text = args.map(a => {
+          if (a === null) return 'null';
+          if (typeof a === 'object') return JSON.stringify(a);
+          return String(a);
+        }).join(' ');
         original(`[oai-publisher] emitting level=${level} connected=${connected} text=${text}`);
         log(level, text);
       };
