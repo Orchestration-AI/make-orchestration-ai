@@ -4,7 +4,7 @@ export const timeServiceFunctions: ServiceDescription = [
   {
     path: "now",
     method: "POST",
-    description: "Returns the current date and time as an ISO 8601 string.",
+    description: "Returns the current date and time.",
     parameters: {},
   },
   {

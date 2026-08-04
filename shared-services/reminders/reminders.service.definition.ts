@@ -12,7 +12,7 @@ export const remindersService = defineService({
     {
       path: "now" as const,
       method: "POST" as const,
-      description: "Part of OAI Reminders. Returns the current date and time as an ISO 8601 string. Use this before creating or updating reminders to get accurate time context.",
+      description: "Part of OAI Reminders. Returns the current date and time. Use this before creating or updating reminders to get accurate time context.",
       parameters: {},
     },
     {
