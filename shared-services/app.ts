@@ -186,7 +186,5 @@ app.expressApp.use(
   express.static("./oai-sandbox/public")
 );
 
-// Register sandbox queue listener
-registerQueueListener();
 
 app.listen(PORT);
