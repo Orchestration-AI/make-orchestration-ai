@@ -20,6 +20,8 @@
     "showdown": "npm:showdown@^2.1.0",
     "socket.io": "npm:socket.io@^4.8.1",
     "markitdown-ts": "npm:markitdown-ts@0.0.10",
+    "mupdf": "npm:mupdf@1.28.0",
+    "pngjs": "npm:pngjs@7.0.0",
     "@deno/sandbox": "npm:@deno/sandbox"
   },
   "deploy": {

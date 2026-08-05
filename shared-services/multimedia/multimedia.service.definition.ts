@@ -4,7 +4,7 @@ import type { Setting } from "@orchestration-ai/sdk/services";
 import { getTextSetting } from "@orchestration-ai/sdk/services";
 import { settingFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
 import { multimediaDescription } from "./multimedia.description.ts";
-import { readFile } from "./multimedia.service.ts";
+import { readFile, pdfToImage } from "./multimedia.service.ts";
 import { defaultSettings, bodyMaxCharsSettingKey } from "./multimedia.constants.ts";
 
 export const multimediaService = defineServiceWithDynamicDescription({
@@ -14,6 +14,7 @@ export const multimediaService = defineServiceWithDynamicDescription({
   defaultSettings,
   description: () => Promise.resolve(multimediaDescription),
   tools: {
+    pdf_to_image: pdfToImage,
     read_file: async (
       body: { url: string; file_type?: string },
       context: Context,

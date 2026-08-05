@@ -2,6 +2,21 @@ import type { ServiceDescription } from "@orchestration-ai/sdk/services";
 
 export const multimediaDescription: ServiceDescription = [
   {
+    path: "pdf_to_image",
+    method: "POST",
+    description:
+      "Part of OAI Multimedia. Downloads a PDF from the given URL, renders all pages into a single tall PNG image, " +
+      "uploads it to agent-scoped OAI Storage under ./temp with a random filename, and returns the file name. " +
+      "Use the returned file_name with OAI Files get_download_url_agent to read the image.",
+    parameters: {
+      url: {
+        type: "string",
+        optional: false,
+        description: "The URL of the PDF file.",
+      },
+    },
+  },
+  {
     path: "read_file",
     method: "POST",
     description:

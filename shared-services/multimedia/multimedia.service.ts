@@ -2,6 +2,11 @@
 import { MarkItDown } from "markitdown-ts";
 import { Buffer } from "node:buffer";
 import process from "node:process";
+import * as mupdf from "mupdf";
+import { PNG } from "pngjs";
+import type { Context, Client } from "@orchestration-ai/sdk/app-builder";
+import { storageUploadFileAgent } from "@orchestration-ai/sdk/sdk.gen";
+import { putToSignedUrl } from "../oai-files/oai-files.service.ts";
 
 const MAX_FILE_SIZE_BYTES = +(process.env.MULTIMEDIA_MAX_FILE_SIZE_BYTES || 104857600);
 
@@ -92,4 +97,61 @@ function contentTypeToExtension(contentType: string): string | undefined {
   };
   const base = contentType.split(";")[0].trim();
   return map[base];
+}
+
+export async function pdfToImage(
+  body: { url: string },
+  context: Context,
+  _engineClient: Client,
+  apiClient: Client,
+): Promise<{ file_name: string }> {
+  const response = await fetch(body.url);
+  if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+  const pdfBytes = new Uint8Array(await response.arrayBuffer());
+
+  const doc = mupdf.Document.openDocument(pdfBytes, "application/pdf");
+  const pageCount = doc.countPages();
+  const scale = 2;
+
+  // Render each page to PNG and decode into raw RGBA
+  const pages: { width: number; height: number; data: Buffer }[] = [];
+  let totalWidth = 0;
+  let totalHeight = 0;
+
+  for (let i = 0; i < pageCount; i++) {
+    const page = doc.loadPage(i);
+    const pixmap = page.toPixmap(mupdf.Matrix.scale(scale, scale), mupdf.ColorSpace.DeviceRGB, false);
+    const png = PNG.sync.read(Buffer.from(pixmap.asPNG()));
+    pages.push({ width: png.width, height: png.height, data: png.data });
+    totalWidth = Math.max(totalWidth, png.width);
+    totalHeight += png.height;
+    pixmap.destroy();
+  }
+
+  // Stitch all pages into one tall PNG
+  const combined = new PNG({ width: totalWidth, height: totalHeight });
+  let yOffset = 0;
+  for (const page of pages) {
+    for (let row = 0; row < page.height; row++) {
+      const srcStart = row * page.width * 4;
+      const dstStart = (yOffset + row) * totalWidth * 4;
+      page.data.copy(combined.data, dstStart, srcStart, srcStart + page.width * 4);
+    }
+    yOffset += page.height;
+  }
+
+  const pngBuffer = PNG.sync.write(combined);
+  const fileName = `.temp/${crypto.randomUUID()}.png`;
+
+  const { workspaceId, orchestrationId, agentId } = context.identity;
+  const { data } = await storageUploadFileAgent({
+    client: apiClient,
+    path: { workspaceId, orchestrationId, agentId },
+    body: { path: fileName, content_type: "image/png" },
+  });
+  if (!data?.upload_url) throw new Error("Failed to get signed upload URL.");
+
+  await putToSignedUrl(data.upload_url, new Uint8Array(pngBuffer), "image/png", data.max_size_bytes ?? 104857600);
+
+  return { file_name: fileName };
 }
