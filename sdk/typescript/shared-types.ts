@@ -118,9 +118,32 @@ export type Context = {
   sessionId?: string;
 };
 
-export type Message = {
-  message: string;
+export type MediaBlock = {
+  type: "image" | "audio";
+  mimeType: string;
+  data: string;
 };
+
+export type ImageGenOptions = {
+  size?: "1024x1024" | "1792x1024" | "1024x1792" | "256x256" | "512x512";
+};
+
+export type AudioGenOptions = {
+  voice?: "alloy" | "ash" | "ballad" | "coral" | "echo" | "fable" | "onyx" | "nova" | "sage" | "shimmer";
+  response_format?: "mp3" | "opus" | "aac" | "flac" | "wav" | "pcm";
+  speed?: number;
+};
+
+export type Message = {
+  message?: string;
+  media?: MediaBlock[];
+  imageOptions?: ImageGenOptions;
+  audioOptions?: AudioGenOptions;
+};
+
+export type InferResponse =
+  | { message: string; media: MediaBlock[] }
+  | string;
 
 // --- Setting Utilities ---
 

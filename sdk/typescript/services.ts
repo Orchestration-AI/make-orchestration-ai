@@ -4,6 +4,8 @@ import { createClient, createConfig } from './client';
 import type { Application } from './types.gen';
 import type {
   Context,
+  InferResponse,
+  MediaBlock,
   Message,
   Permission,
   ServiceDescription,
@@ -14,7 +16,11 @@ import type {
 // Re-export everything from shared-types for convenience
 export type {
   AgentIdentity,
+  AudioGenOptions,
   Context,
+  ImageGenOptions,
+  InferResponse,
+  MediaBlock,
   Message,
   Permission,
   PermissionName,
@@ -163,7 +169,7 @@ export async function sendMessages(
   layerId: string,
   client: Client,
   sessionId?: string
-): Promise<string> {
+): Promise<InferResponse> {
   const response = await client.post({
     url: `/agents/${agentId}/layers/${layerIndex}/messages`,
     headers: {
@@ -172,12 +178,12 @@ export async function sendMessages(
       ...(sessionId ? { 'x-session-id': sessionId } : {}),
     },
     body: messages,
-    responseType: 'text',
+    responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
   });
-  if(response.data) {
-    return response.data as string;
-  } else {
-    return response.error as string || "Unknown error";
+  const data = response.data;
+  if (data && typeof data === 'object' && 'media' in data) {
+    return data as { message: string; media: MediaBlock[] };
   }
+  return (typeof data === 'string' ? data : String(data ?? response.error ?? 'Unknown error'));
 }
