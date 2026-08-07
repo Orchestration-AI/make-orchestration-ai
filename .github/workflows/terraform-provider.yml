@@ -1,0 +1,111 @@
+name: Terraform Provider
+
+on:
+  push:
+    branches:
+      - qa
+    paths:
+      - 'repositories/terraform-provider-orchestration-ai/**'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: repositories/terraform-provider-orchestration-ai/go.mod
+
+      - name: Build
+        run: go build ./...
+        working-directory: repositories/terraform-provider-orchestration-ai
+
+      - name: Unit tests
+        run: go test ./... -v -count=1
+        working-directory: repositories/terraform-provider-orchestration-ai
+
+  acceptance-test:
+    name: Acceptance Test
+    runs-on: ubuntu-latest
+    needs: build
+
+    env:
+      ORCHESTRATION_AI_CLIENT_ID: ${{ secrets.TF_OAI_CLIENT_ID }}
+      ORCHESTRATION_AI_CLIENT_SECRET: ${{ secrets.TF_OAI_CLIENT_SECRET }}
+      TF_VAR_oai_client_id: ${{ secrets.TF_OAI_CLIENT_ID }}
+      TF_VAR_oai_client_secret: ${{ secrets.TF_OAI_CLIENT_SECRET }}
+      TF_VAR_oai_test_llm_client_id: ${{ secrets.TF_OAI_TEST_LLM_CLIENT_ID }}
+      TF_VAR_oai_test_llm_client_secret: ${{ secrets.TF_OAI_TEST_LLM_CLIENT_SECRET }}
+      TF_VAR_oai_test_principal_id: ${{ secrets.TF_OAI_TEST_PRINCIPAL_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: repositories/terraform-provider-orchestration-ai/go.mod
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Build and install provider locally
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o /tmp/terraform-provider-orchestration-ai .
+        working-directory: repositories/terraform-provider-orchestration-ai
+
+      - name: Write dev_overrides terraformrc
+        run: |
+          cat > ~/.terraformrc <<EOF
+          provider_installation {
+            dev_overrides {
+              "orchestration-ai/orchestration-ai" = "/tmp"
+            }
+            direct {}
+          }
+          EOF
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve
+        working-directory: repositories/terraform-provider-orchestration-ai/tests/acceptance
+
+      - name: Terraform destroy
+        if: always()
+        run: terraform destroy -auto-approve
+        working-directory: repositories/terraform-provider-orchestration-ai/tests/acceptance
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs: acceptance-test
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: repositories/terraform-provider-orchestration-ai/go.mod
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        id: import_gpg
+        with:
+          gpg_private_key: ${{ secrets.TF_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.TF_GPG_PASSPHRASE }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean --snapshot
+          workdir: repositories/terraform-provider-orchestration-ai
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}

@@ -1,0 +1,9 @@
+# Copy this file to ~/.terraformrc to use the provider from your local build.
+# Run `make install` first to build and place the binary.
+
+provider_installation {
+  dev_overrides {
+    "orchestration-ai/orchestration-ai" = "${HOME}/.terraform.d/plugins/registry.terraform.io/orchestration-ai/orchestration-ai/0.0.1/${GOOS}_${GOARCH}"
+  }
+  direct {}
+}
