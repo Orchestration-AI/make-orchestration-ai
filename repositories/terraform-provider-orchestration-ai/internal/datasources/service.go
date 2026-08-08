@@ -27,8 +27,8 @@ func (d *ServiceDataSource) Metadata(_ context.Context, req datasource.MetadataR
 func (d *ServiceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           schema.StringAttribute{Required: true},
-			"service_name": schema.StringAttribute{Computed: true},
+			"id":           schema.StringAttribute{Computed: true},
+			"service_name": schema.StringAttribute{Required: true},
 		},
 	}
 }
@@ -45,16 +45,28 @@ func (d *ServiceDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	httpResp, err := d.client.Do(http.MethodGet, "/services/"+state.ID.ValueString(), nil)
+
+	httpResp, err := d.client.Do(http.MethodGet, "/services", nil)
 	if err != nil {
-		resp.Diagnostics.AddError("Read service failed", err.Error())
+		resp.Diagnostics.AddError("Read services failed", err.Error())
 		return
 	}
-	var result map[string]any
-	if err := client.DecodeResponse(httpResp, &result); err != nil {
-		resp.Diagnostics.AddError("Read service failed", err.Error())
+	var results []map[string]any
+	if err := client.DecodeResponse(httpResp, &results); err != nil {
+		resp.Diagnostics.AddError("Read services failed", err.Error())
 		return
 	}
-	state.ServiceName = types.StringValue(fmt.Sprintf("%v", result["service_name"]))
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+
+	for _, r := range results {
+		if fmt.Sprintf("%v", r["service_name"]) == state.ServiceName.ValueString() {
+			state.ID = types.StringValue(fmt.Sprintf("%v", r["id"]))
+			resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+			return
+		}
+	}
+
+	resp.Diagnostics.AddError(
+		"Service not found",
+		fmt.Sprintf("No service with name %q was found.", state.ServiceName.ValueString()),
+	)
 }

@@ -64,8 +64,8 @@ func (r *TaskResource) Create(ctx context.Context, req resource.CreateRequest, r
 	body := map[string]any{
 		"message": plan.Message.ValueString(),
 	}
-	if !plan.CronExpression.IsNull() && !plan.CronExpression.IsUnknown() {
-		body["cron_expression"] = plan.CronExpression.ValueString()
+	if v := plan.CronExpression.ValueString(); v != "" {
+		body["cron_expression"] = v
 	}
 	httpResp, err := r.client.Do(http.MethodPost, r.basePath(plan), body)
 	if err != nil {

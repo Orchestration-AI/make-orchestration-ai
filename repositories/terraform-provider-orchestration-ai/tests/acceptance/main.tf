@@ -92,7 +92,7 @@ resource "oai_setting" "test" {
   agent_id            = oai_agent.test.id
   setting_name        = "tf-acceptance-setting"
   setting_description = "Acceptance test setting"
-  setting_type        = "text"
+  setting_type        = "Text"
   text_value          = "hello"
   boolean_value       = false
 }
