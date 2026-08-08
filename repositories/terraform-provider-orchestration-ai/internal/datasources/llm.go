@@ -27,8 +27,8 @@ func (d *LlmDataSource) Metadata(_ context.Context, req datasource.MetadataReque
 func (d *LlmDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":       schema.StringAttribute{Required: true},
-			"llm_name": schema.StringAttribute{Computed: true},
+			"id":       schema.StringAttribute{Computed: true},
+			"llm_name": schema.StringAttribute{Required: true},
 		},
 	}
 }
@@ -45,16 +45,28 @@ func (d *LlmDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	httpResp, err := d.client.Do(http.MethodGet, "/llms/"+state.ID.ValueString(), nil)
+
+	httpResp, err := d.client.Do(http.MethodGet, "/llms", nil)
 	if err != nil {
-		resp.Diagnostics.AddError("Read llm failed", err.Error())
+		resp.Diagnostics.AddError("Read llms failed", err.Error())
 		return
 	}
-	var result map[string]any
-	if err := client.DecodeResponse(httpResp, &result); err != nil {
-		resp.Diagnostics.AddError("Read llm failed", err.Error())
+	var results []map[string]any
+	if err := client.DecodeResponse(httpResp, &results); err != nil {
+		resp.Diagnostics.AddError("Read llms failed", err.Error())
 		return
 	}
-	state.LlmName = types.StringValue(fmt.Sprintf("%v", result["llm_name"]))
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+
+	for _, r := range results {
+		if fmt.Sprintf("%v", r["llm_name"]) == state.LlmName.ValueString() {
+			state.ID = types.StringValue(fmt.Sprintf("%v", r["id"]))
+			resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+			return
+		}
+	}
+
+	resp.Diagnostics.AddError(
+		"LLM not found",
+		fmt.Sprintf("No LLM with name %q was found. Make sure the oai_llm_key has been created and allow up to 1 minute for discovery.", state.LlmName.ValueString()),
+	)
 }
