@@ -1,0 +1,150 @@
+{
+  "name": "@orchestration-ai/sdk",
+  "version": "0.25.0",
+  "description": "TypeScript SDK for Orchestration AI - The Operating System for AI-Powered Businesses",
+  "license": "MIT",
+  "author": "Orchestration AI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Orchestration-AI/make-orchestration-ai.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://orchestration-ai.com",
+  "bugs": {
+    "url": "https://github.com/Orchestration-AI/make-orchestration-ai/issues"
+  },
+  "keywords": [
+    "orchestration-ai",
+    "sdk",
+    "ai",
+    "typescript",
+    "api-client"
+  ],
+  "main": "./dist/cjs/sdk.gen.js",
+  "module": "./dist/esm/sdk.gen.js",
+  "types": "./dist/esm/sdk.gen.d.ts",
+  "exports": {
+    "./client.gen": {
+      "import": {
+        "types": "./dist/esm/client.gen.d.ts",
+        "default": "./dist/esm/client.gen.js"
+      },
+      "require": {
+        "types": "./dist/cjs/client.gen.d.ts",
+        "default": "./dist/cjs/client.gen.js"
+      }
+    },
+    "./sdk.gen": {
+      "import": {
+        "types": "./dist/esm/sdk.gen.d.ts",
+        "default": "./dist/esm/sdk.gen.js"
+      },
+      "require": {
+        "types": "./dist/cjs/sdk.gen.d.ts",
+        "default": "./dist/cjs/sdk.gen.js"
+      }
+    },
+    "./types.gen": {
+      "import": {
+        "types": "./dist/esm/types.gen.d.ts",
+        "default": "./dist/esm/types.gen.js"
+      },
+      "require": {
+        "types": "./dist/cjs/types.gen.d.ts",
+        "default": "./dist/cjs/types.gen.js"
+      }
+    },
+    "./oauth-utils": {
+      "import": {
+        "types": "./dist/esm/oauth-utils.d.ts",
+        "default": "./dist/esm/oauth-utils.js"
+      },
+      "require": {
+        "types": "./dist/cjs/oauth-utils.d.ts",
+        "default": "./dist/cjs/oauth-utils.js"
+      }
+    },
+    "./services": {
+      "import": {
+        "types": "./dist/esm/services.d.ts",
+        "default": "./dist/esm/services.js"
+      },
+      "require": {
+        "types": "./dist/cjs/services.d.ts",
+        "default": "./dist/cjs/services.js"
+      }
+    },
+    "./shared-types": {
+      "import": {
+        "types": "./dist/esm/shared-types.d.ts",
+        "default": "./dist/esm/shared-types.js"
+      },
+      "require": {
+        "types": "./dist/cjs/shared-types.d.ts",
+        "default": "./dist/cjs/shared-types.js"
+      }
+    },
+    "./app-builder": {
+      "import": {
+        "types": "./dist/esm/app-builder.d.ts",
+        "default": "./dist/esm/app-builder.js"
+      },
+      "require": {
+        "types": "./dist/cjs/app-builder.d.ts",
+        "default": "./dist/cjs/app-builder.js"
+      }
+    },
+    "./streaming": {
+      "import": {
+        "types": "./dist/esm/streaming.d.ts",
+        "default": "./dist/esm/streaming.js"
+      },
+      "require": {
+        "types": "./dist/cjs/streaming.d.ts",
+        "default": "./dist/cjs/streaming.js"
+      }
+    },
+    "./logging-publisher": {
+      "import": {
+        "types": "./dist/esm/logging-publisher.d.ts",
+        "default": "./dist/esm/logging-publisher.js"
+      },
+      "require": {
+        "types": "./dist/cjs/logging-publisher.d.ts",
+        "default": "./dist/cjs/logging-publisher.js"
+      }
+    },
+    "./logging-consumer": {
+      "import": {
+        "types": "./dist/esm/logging-consumer.d.ts",
+        "default": "./dist/esm/logging-consumer.js"
+      },
+      "require": {
+        "types": "./dist/cjs/logging-consumer.d.ts",
+        "default": "./dist/cjs/logging-consumer.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run generate && npm run clean && npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc --project tsconfig.json && node scripts/fix-esm-imports.js && echo '{\"type\":\"module\"}' > dist/esm/package.json",
+    "build:cjs": "tsc --project tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
+    "generate": "openapi-ts",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "express": "^5.0.0",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.97.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.8.0",
+    "typescript": "^5.5.0"
+  }
+}
