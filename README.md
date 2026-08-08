@@ -8,7 +8,7 @@ This monorepo contains three independently usable components:
 |-----------|-------------|----------|
 | [`sdk/`](#typescript-sdk) | TypeScript SDK for building OAI applications | TypeScript |
 | [`shared-services/`](#shared-services) | Pre-built agent services deployable on Deno Deploy | TypeScript / Deno |
-| [`repositories/terraform-provider-orchestration-ai/`](#terraform-provider) | Terraform provider for managing OAI resources | Go |
+| [terraform-provider-orchestration-ai](https://github.com/Orchestration-AI/terraform-provider-orchestration-ai) | Terraform provider for managing OAI resources | Go |
 
 ---
 
@@ -141,112 +141,19 @@ Pushes to `qa` trigger a staging deploy. Merges to `main` trigger a production d
 
 ---
 
-## Terraform Provider
-
-A Terraform provider for managing Orchestration AI resources as infrastructure-as-code.
-
-### Resources supported
-
-| Resource | Description |
-|----------|-------------|
-| `oai_workspace` | Workspaces |
-| `oai_orchestration` | Orchestrations |
-| `oai_agent` | Agents |
-| `oai_application` | Applications |
-| `oai_endpoint` | Agent endpoints |
-| `oai_link` | Agent links |
-| `oai_setting` | Agent settings |
-| `oai_llm_key` | LLM API keys |
-| `oai_access` | Access control |
-| `oai_ticker_config` | Ticker (cron) configuration |
-| `oai_storage_file` | Storage files |
-| `oai_storage_dir` | Storage directories |
-| `oai_task` | Tasks |
-
-### Data sources
-
-- `oai_llm` - look up a single LLM
-- `oai_llms` - list available LLMs
-- `oai_service` - look up a service
-
-### Prerequisites
-
-- [Go](https://go.dev) 1.21+
-- [Terraform](https://www.terraform.io) 1.5+
-
-### Local development
-
-```bash
-cd repositories/terraform-provider-orchestration-ai
-
-# Build
-make build
-
-# Install locally (~/.terraform.d/plugins/...)
-make install
-
-# Unit tests
-make test
-
-# Acceptance tests (requires live credentials)
-ORCHESTRATION_AI_CLIENT_ID=<id> ORCHESTRATION_AI_CLIENT_SECRET=<secret> make testacc
-```
-
-### Usage example
-
-```hcl
-terraform {
-  required_providers {
-    orchestration_ai = {
-      source  = "orchestration-ai/orchestration-ai"
-      version = "~> 0.1"
-    }
-  }
-}
-
-provider "oai" {
-  # Or set ORCHESTRATION_AI_CLIENT_ID / ORCHESTRATION_AI_CLIENT_SECRET env vars
-  client_id     = var.oai_client_id
-  client_secret = var.oai_client_secret
-}
-
-resource "oai_workspace" "main" {
-  workspace_name = "my-workspace"
-}
-
-resource "oai_agent" "main" {
-  workspace_id     = oai_workspace.main.id
-  orchestration_id = oai_orchestration.main.id
-  agent_name       = "my-agent"
-  agent_description = "Handles the thing"
-}
-```
-
-See [`repositories/terraform-provider-orchestration-ai/examples/main.tf`](repositories/terraform-provider-orchestration-ai/examples/main.tf) for a full example.
-
-### CI
-
-| Trigger | Action |
-|---------|--------|
-| Push to `qa` with changes under `repositories/terraform-provider-orchestration-ai/` | Build → acceptance tests → publish snapshot |
-
----
-
 ## Repository structure
 
 ```
 make-orchestration-ai/
 ├── sdk/                                        # @orchestration-ai/sdk npm package
-├── shared-services/                            # Deno Deploy application
-│   ├── <service-name>/                         # One directory per service
-│   │   ├── <service>.service.definition.ts     # Service definition (tools, settings, description)
-│   │   ├── <service>.service.ts                # Tool implementations
-│   │   └── public/                             # Optional static config UI
-│   ├── app.ts                                  # Express app wiring
-│   ├── main.ts                                 # Entrypoint
-│   └── deno.json                               # Deno config + import map
-└── repositories/
-    └── terraform-provider-orchestration-ai/    # Go Terraform provider
+└── shared-services/                            # Deno Deploy application
+    ├── <service-name>/                         # One directory per service
+    │   ├── <service>.service.definition.ts     # Service definition (tools, settings, description)
+    │   ├── <service>.service.ts                # Tool implementations
+    │   └── public/                             # Optional static config UI
+    ├── app.ts                                  # Express app wiring
+    ├── main.ts                                 # Entrypoint
+    └── deno.json                               # Deno config + import map
 ```
 
 ---
