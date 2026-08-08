@@ -1,4 +1,3 @@
-import process from 'node:process';
 import type { Client, Config } from './client';
 import { createClient, createConfig } from './client';
 import type { Application } from './types.gen';
@@ -54,7 +53,7 @@ export function createApplicationClient(application: Application, layerId?: stri
 /** Create a bare API client (no auth configured). Use with setupClientCredentials. */
 export function createApiClient(): Client {
   return createClient(createConfig({
-    baseURL: process.env.OAI_API_URL ?? 'https://api.orchestration-ai.com',
+    baseURL: (typeof process !== 'undefined' ? process.env.OAI_API_URL : undefined) ?? 'https://api.orchestration-ai.com',
   }));
 }
 
