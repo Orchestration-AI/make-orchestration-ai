@@ -25,7 +25,7 @@ export type ServiceInfo = {
   service_description: string;
 };
 
-type ServiceDescriptionParameters = Record<
+export type ServiceDescriptionParameters = Record<
   string,
   {
     optional: boolean;

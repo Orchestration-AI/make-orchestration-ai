@@ -1,6 +1,6 @@
 {
   "name": "@orchestration-ai/sdk",
-  "version": "0.25.0",
+  "version": "0.26.0",
   "description": "TypeScript SDK for Orchestration AI - The Operating System for AI-Powered Businesses",
   "license": "MIT",
   "author": "Orchestration AI",
@@ -123,6 +123,16 @@
         "types": "./dist/cjs/logging-consumer.d.ts",
         "default": "./dist/cjs/logging-consumer.js"
       }
+    },
+    "./vm": {
+      "import": {
+        "types": "./dist/esm/vm.d.ts",
+        "default": "./dist/esm/vm.js"
+      },
+      "require": {
+        "types": "./dist/cjs/vm.d.ts",
+        "default": "./dist/cjs/vm.js"
+      }
     }
   },
   "files": [
@@ -130,10 +140,11 @@
   ],
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run generate && npm run clean && npm run build:esm && npm run build:cjs",
+    "build": "npm run generate && npm run clean && npm run test && npm run build:esm && npm run build:cjs",
     "build:esm": "tsc --project tsconfig.json && node scripts/fix-esm-imports.js && echo '{\"type\":\"module\"}' > dist/esm/package.json",
     "build:cjs": "tsc --project tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "generate": "openapi-ts",
+    "test": "vitest run",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
@@ -145,6 +156,7 @@
     "@hey-api/openapi-ts": "0.97.1",
     "@types/express": "^5.0.6",
     "@types/node": "^25.8.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^4.1.10"
   }
 }
