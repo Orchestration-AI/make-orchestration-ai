@@ -4,11 +4,13 @@ on:
   push:
     tags:
       - 'tf-provider/v*'
+  create:
 
 jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/tf-provider/v')
 
     permissions:
       contents: write
