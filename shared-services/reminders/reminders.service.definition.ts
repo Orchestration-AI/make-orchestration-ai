@@ -52,7 +52,20 @@ export const remindersService = defineService({
     },
   ],
   tools: {
-    now: () => new Date().toISOString(),
+    now: () => {
+      const now = new Date();
+      const iso = now.toISOString();
+      const readable = now.toLocaleString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
+      });
+      return `${readable} (${iso})`;
+    },
     list_reminders: (body: Record<never, never>, context: Context, engineClient: Client, apiClient: Client) =>
       listReminders(body, context, engineClient, apiClient),
     create_reminder: (body: Parameters<typeof createReminder>[0], context: Context, engineClient: Client, apiClient: Client) =>
