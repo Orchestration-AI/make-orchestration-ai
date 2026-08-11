@@ -218,7 +218,7 @@ describe('hooks.getTools', () => {
 
     const tools = await wf.hooks.getTools(makeContext('layer-id-1'));
     expect(tools).toEqual([
-      { path: 'search', description: 'Search things', method: 'POST', parameters: schema },
+      { path: 'search', name: 'search', description: 'Search things', method: 'POST', parameters: schema },
     ]);
   });
 

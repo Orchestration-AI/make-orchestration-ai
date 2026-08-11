@@ -12,6 +12,7 @@ export type ToolPayload = {
 };
 
 export type VmToolDefinition = {
+  name: string;
   path: string;
   description: string;
   method: 'POST';
@@ -212,6 +213,7 @@ export function createWorkflow(config: WorkflowConfig): Workflow {
         const def = findDefForLayerId(ctx.identity.layerId);
         if (!def) return [];
         return def._tools.map((t) => ({
+          name: t.name,
           path: t.name,
           description: t.description,
           method: 'POST' as const,
