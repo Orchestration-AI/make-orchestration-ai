@@ -10,7 +10,7 @@ export const remindersService = defineService({
   defaultSettings,
   description: [
     {
-      path: "now" as const,
+      path: "reminders_now" as const,
       method: "POST" as const,
       description: "Part of OAI Reminders. Returns the current date and time. Use this before creating or updating reminders to get accurate time context.",
       parameters: {},
@@ -52,7 +52,7 @@ export const remindersService = defineService({
     },
   ],
   tools: {
-    now: () => {
+    reminders_now: () => {
       const now = new Date();
       const iso = now.toISOString();
       const readable = now.toLocaleString("en-GB", {
