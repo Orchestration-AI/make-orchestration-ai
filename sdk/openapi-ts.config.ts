@@ -17,7 +17,7 @@ export default defineConfig({
       errors: { name: (name) => stripController(name) + 'Errors', error: (name) => stripController(name) + 'Error' },
     },
     {
-      name: '@hey-api/client-axios',
+      name: '@hey-api/client-fetch',
     },
     {
       name: '@hey-api/sdk',

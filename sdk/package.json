@@ -1,6 +1,6 @@
 {
   "name": "@orchestration-ai/sdk",
-  "version": "0.27.0",
+  "version": "0.28.0",
   "description": "TypeScript SDK for Orchestration AI - The Operating System for AI-Powered Businesses",
   "license": "MIT",
   "author": "Orchestration AI",
@@ -148,11 +148,11 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "axios": "^1.7.0",
     "express": "^5.0.0",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@hey-api/client-fetch": "^0.9.0",
     "@hey-api/openapi-ts": "0.97.1",
     "@types/express": "^5.0.6",
     "@types/node": "^25.8.0",

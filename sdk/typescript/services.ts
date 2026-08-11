@@ -43,17 +43,17 @@ export type {
 /** Create a client configured for an application's URL, optionally with a layer ID for context */
 export function createApplicationClient(application: Application, layerId?: string): Client {
   return createClient(createConfig({
-    baseURL: application.application_url,
+    baseUrl: application.application_url,
     headers: {
       ...(layerId ? { 'X-LayerId': layerId } : {}),
     },
-  } as Config));
+  }));
 }
 
 /** Create a bare API client (no auth configured). Use with setupClientCredentials. */
 export function createApiClient(): Client {
   return createClient(createConfig({
-    baseURL: (typeof process !== 'undefined' ? process.env.OAI_API_URL : undefined) ?? 'https://api.orchestration-ai.com',
+    baseUrl: (typeof process !== 'undefined' ? process.env.OAI_API_URL : undefined) ?? 'https://api.orchestration-ai.com',
   }));
 }
 
@@ -67,11 +67,11 @@ export function createEngineClient(engineUrlOrAccessKey: string | null, accessKe
     : "https://oai-inference-engine-21142163942.africa-south1.run.app";
   const key = accessKey ?? (engineUrlOrAccessKey as string);
   return createClient(createConfig({
-    baseURL: url,
+    baseUrl: url,
     headers: {
       Authorization: `Bearer ${key}`,
     },
-  } as Config));
+  }));
 }
 
 // --- Application Service Endpoints ---
@@ -80,7 +80,6 @@ export function createEngineClient(engineUrlOrAccessKey: string | null, accessKe
 export async function listServices(client: Client): Promise<ServiceInfo[]> {
   const response = await client.get({
     url: '/services',
-    responseType: 'json',
   });
   return response.data as ServiceInfo[];
 }
@@ -89,7 +88,6 @@ export async function listServices(client: Client): Promise<ServiceInfo[]> {
 export async function getPermissions(client: Client): Promise<Permission[]> {
   const response = await client.get({
     url: '/permissions',
-    responseType: 'json',
   });
   return response.data as Permission[];
 }
@@ -101,7 +99,6 @@ export async function getDefaultSettings(
 ): Promise<Setting[]> {
   const response = await client.get({
     url: `/services/${serviceName}/api/default-settings`,
-    responseType: 'json',
   });
   return response.data as Setting[];
 }
@@ -113,7 +110,6 @@ export async function getServiceDescription(
 ): Promise<ServiceDescription> {
   const response = await client.get({
     url: `/services/${serviceName}/api/description`,
-    responseType: 'json',
   });
   return response.data as ServiceDescription;
 }
@@ -143,7 +139,6 @@ export async function callServiceTool<TBody = unknown, TResponse = unknown>(
     url: `/services/${serviceName}/api/${toolPath}`,
     headers: options?.body ? { 'Content-Type': 'application/json' } : undefined,
     body: options?.body,
-    responseType: 'json',
   });
   return response.data as TResponse;
 }
@@ -154,7 +149,6 @@ export async function callServiceTool<TBody = unknown, TResponse = unknown>(
 export async function getContext(layerId: string, client: Client): Promise<Context> {
   const response = await client.get({
     url: `/agents/context/${layerId}`,
-    responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
   });
   return response.data as Context;
@@ -177,7 +171,6 @@ export async function sendMessages(
       ...(sessionId ? { 'x-session-id': sessionId } : {}),
     },
     body: messages,
-    responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
   });
   const data = response.data;

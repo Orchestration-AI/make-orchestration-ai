@@ -123,36 +123,36 @@ export function setupBrowserAuth(sdkClient: Client, options?: BrowserAuthOptions
     } catch { return null; }
   }
 
-  sdkClient.instance.interceptors.request.use(async (reqConfig) => {
+  sdkClient.interceptors.request.use(async (request, _options) => {
     let tokens = getCurrentLogin();
-    if (!tokens) return reqConfig;
+    if (!tokens) return request;
 
     if (isTokenExpired(tokens) && options?.onRefreshToken) {
       if (!refreshPromise) refreshPromise = refresh().finally(() => { refreshPromise = null; });
       tokens = await refreshPromise;
-      if (!tokens) return reqConfig;
+      if (!tokens) return request;
     }
 
     if (tokens && !isTokenExpired(tokens)) {
-      reqConfig.headers = reqConfig.headers || {};
-      reqConfig.headers['Authorization'] = `Bearer ${tokens.access_token}`;
+      const headers = new Headers(request.headers);
+      headers.set('Authorization', `Bearer ${tokens.access_token}`);
+      return new Request(request, { headers });
     }
-    return reqConfig;
+    return request;
   });
 
   if (options?.onRefreshToken) {
-    sdkClient.instance.interceptors.response.use(undefined, async (error) => {
-      const originalRequest = error.config;
-      if (error.response?.status === 401 && !originalRequest._retried) {
-        originalRequest._retried = true;
+    sdkClient.interceptors.response.use(async (response, request, _options) => {
+      if (response.status === 401) {
         if (!refreshPromise) refreshPromise = refresh().finally(() => { refreshPromise = null; });
         const tokens = await refreshPromise;
         if (tokens) {
-          originalRequest.headers['Authorization'] = `Bearer ${tokens.access_token}`;
-          return sdkClient.instance(originalRequest);
+          const headers = new Headers(request.headers);
+          headers.set('Authorization', `Bearer ${tokens.access_token}`);
+          return fetch(new Request(request, { headers }));
         }
       }
-      return Promise.reject(error);
+      return response;
     });
   }
 }
@@ -164,7 +164,7 @@ export function setupClientCredentials(sdkClient: Client, config: OAuthConfig): 
   let refreshPromise: Promise<OAuthTokens | null> | null = null;
 
   // Use a bare client (no interceptors) for token requests to avoid deadlock
-  const tokenClient = createClient(createConfig({ baseURL: sdkClient.getConfig().baseURL }));
+  const tokenClient = createClient(createConfig({ baseUrl: sdkClient.getConfig().baseUrl }));
 
   async function fetchToken(): Promise<OAuthTokens | null> {
     try {
@@ -183,29 +183,29 @@ export function setupClientCredentials(sdkClient: Client, config: OAuthConfig): 
     } catch { return null; }
   }
 
-  sdkClient.instance.interceptors.request.use(async (reqConfig) => {
+  sdkClient.interceptors.request.use(async (request, _options) => {
     if (!tokens || isTokenExpired(tokens)) {
       if (!refreshPromise) refreshPromise = fetchToken().finally(() => { refreshPromise = null; });
       tokens = await refreshPromise;
     }
     if (tokens) {
-      reqConfig.headers = reqConfig.headers || {};
-      reqConfig.headers['Authorization'] = `Bearer ${tokens.access_token}`;
+      const headers = new Headers(request.headers);
+      headers.set('Authorization', `Bearer ${tokens.access_token}`);
+      return new Request(request, { headers });
     }
-    return reqConfig;
+    return request;
   });
 
-  sdkClient.instance.interceptors.response.use(undefined, async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retried) {
-      originalRequest._retried = true;
+  sdkClient.interceptors.response.use(async (response, request, _options) => {
+    if (response.status === 401) {
       if (!refreshPromise) refreshPromise = fetchToken().finally(() => { refreshPromise = null; });
       tokens = await refreshPromise;
       if (tokens) {
-        originalRequest.headers['Authorization'] = `Bearer ${tokens.access_token}`;
-        return sdkClient.instance(originalRequest);
+        const headers = new Headers(request.headers);
+        headers.set('Authorization', `Bearer ${tokens.access_token}`);
+        return fetch(new Request(request, { headers }));
       }
     }
-    return Promise.reject(error);
+    return response;
   });
 }
