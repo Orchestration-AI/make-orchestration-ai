@@ -14,6 +14,7 @@ import {
   mailFooterSettingKey,
 } from "./mail.constants.ts";
 import { getRequiredEnvValue } from "../environment.ts";
+import { getImapCredentials, appendToSent } from "./imap.proxy.ts";
 
 export function getMailerTransport(settings: Setting[]) {
   return {
@@ -201,5 +202,25 @@ async function sendMailWithContent(
     ].filter(Boolean);
     console.warn(`[mail] Skipping attachment resolution - missing: ${missing.join(", ")}`);
   }
-  return sendMail(finalHtml, finalText, to, cc, bcc, subject, settings, sessionId, attachments);
+  await sendMail(finalHtml, finalText, to, cc, bcc, subject, settings, sessionId, attachments);
+
+  const imapCredentials = getImapCredentials(settings);
+  if (imapCredentials) {
+    const smtpFrom = getTextSetting(settings, smtpSelfEmailSettingKey);
+    const rawMessage = [
+      `From: ${smtpFrom}`,
+      `To: ${to}`,
+      ...(cc ? [`Cc: ${cc}`] : []),
+      ...(bcc ? [`Bcc: ${bcc}`] : []),
+      `Subject: ${subject}`,
+      `Date: ${new Date().toUTCString()}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/html; charset=utf-8`,
+      ``,
+      finalHtml,
+    ].join("\r\n");
+    appendToSent(imapCredentials, rawMessage).catch((err) =>
+      console.warn("[mail] Failed to append to Sent folder:", err),
+    );
+  }
 }

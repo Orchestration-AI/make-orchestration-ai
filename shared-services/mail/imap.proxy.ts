@@ -111,3 +111,7 @@ export async function markThreadSeen(credentials: ImapCredentials, threadId: str
 export async function markMessageSeen(credentials: ImapCredentials, uid: string): Promise<void> {
   await callImapProxy("MARK_SEEN", { credentials, uid });
 }
+
+export async function appendToSent(credentials: ImapCredentials, rawMessage: string): Promise<void> {
+  await callImapProxy("APPEND_SENT", { credentials, rawMessage });
+}
