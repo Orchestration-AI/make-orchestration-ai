@@ -176,6 +176,9 @@ export async function sendMessages(
   const data = response.data;
   if (data && typeof data === 'object' && 'media' in data) {
     return data as { message: string; media: MediaBlock[] };
+  } else if(typeof data === 'string') {
+    return data;
+  } else {
+    throw new Error(`Unexpected response from engine: ${JSON.stringify(data)}`);
   }
-  return (typeof data === 'string' ? data : String(data ?? response.error ?? 'Unknown error'));
 }
