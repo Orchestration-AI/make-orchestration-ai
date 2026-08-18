@@ -218,6 +218,8 @@ export const mailService = defineServiceWithDynamicDescription({
 
       const latest = messages[messages.length - 1];
       const agentEmail = getTextSetting(settings, smtpSelfEmailSettingKey) ?? "";
+      const extractAddress = (addr: string) => addr.match(/<([^>]+)>/)?.[1]?.toLowerCase() ?? addr.toLowerCase().trim();
+      const agentAddress = extractAddress(agentEmail);
 
       // Reply-to: the sender of the latest message
       const replyTo = latest.from;
@@ -226,10 +228,10 @@ export const mailService = defineServiceWithDynamicDescription({
       const originalParticipants = [
         ...(latest.to?.split(",") ?? []),
         ...(latest.cc?.split(",") ?? []),
-      ].map((a) => a.trim()).filter((a) => a && a !== agentEmail);
+      ].map((a) => a.trim()).filter((a) => a && extractAddress(a) !== agentAddress);
 
       // Remove replyTo from cc to avoid duplication
-      const cc = originalParticipants.filter((a) => a !== replyTo).join(", ");
+      const cc = originalParticipants.filter((a) => extractAddress(a) !== extractAddress(replyTo)).join(", ");
 
       const subject = latest.subject
         ? (latest.subject.startsWith("Re:") ? latest.subject : `Re: ${latest.subject}`)
