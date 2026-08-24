@@ -132,7 +132,7 @@ export function sendMarkdownMail(
   agentId?: string,
   apiClient?: Client,
 ) {
-  const converter = new showdown.Converter();
+  const converter = new showdown.Converter({ tables: true });
   const html = converter.makeHtml(markdown);
   return sendMailWithContent(html, markdown, to, cc, bcc, subject, settings, sessionId, attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
 }
@@ -167,7 +167,7 @@ export function replyToThread(
   agentId?: string,
   apiClient?: Client,
 ) {
-  const converter = new showdown.Converter();
+  const converter = new showdown.Converter({ tables: true });
   const html = converter.makeHtml(markdown);
   return sendMailWithContent(html, markdown, to, cc, "", subject, settings, threadId, attachmentPaths, workspaceId, orchestrationId, agentId, apiClient);
 }
