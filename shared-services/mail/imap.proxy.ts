@@ -106,12 +106,20 @@ export async function fetchMessage(credentials: ImapCredentials, uid: string): P
 
 export async function markThreadSeen(credentials: ImapCredentials, threadId: string): Promise<void> {
   console.log(`[Marking thread ${threadId} as seen`);
-  await callImapProxy("MARK_SEEN", { credentials, threadId });
+
+  await Promise.all([
+    callImapProxy("MARK_SEEN", { credentials, threadId }),
+    callImapProxy("MARK_SEEN", { credentials, uid: threadId }),
+  ]);
 }
 
 export async function markMessageSeen(credentials: ImapCredentials, uid: string): Promise<void> {
   console.log(`[Marking message ${uid} as seen`);
-  await callImapProxy("MARK_SEEN", { credentials, uid });
+
+  await Promise.all([
+    callImapProxy("MARK_SEEN", { credentials, uid }),
+    callImapProxy("MARK_SEEN", { credentials, threadId: uid }),
+  ]);
 }
 
 export async function appendToSent(credentials: ImapCredentials, rawMessage: string): Promise<void> {
