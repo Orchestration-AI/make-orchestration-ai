@@ -20,7 +20,7 @@ function makeApiClient(workspaceOwnerId: string) {
 }
 
 // Cron 1: Poll for new emails - every minute
-Deno.cron("mail-email-poll", "*/5 * * * *", async () => {
+Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
   const agents = await listMailAgents();
   if (!agents.length) return;
   console.log(`[mail:cron] Polling ${agents.length} agent(s) for new emails`);
@@ -69,7 +69,7 @@ Deno.cron("mail-email-poll", "*/5 * * * *", async () => {
 });
 
 // Cron 2: Cleanup agents that no longer have the mail service - every 15 minutes
-Deno.cron("mail-agent-cleanup", "*/15 * * * *", async () => {
+Deno.cron("mail-agent-cleanup", "*/59 * * * *", async () => {
   const agents = await listMailAgents();
   if (!agents.length) return;
   console.log(`[mail:cron] Cleanup check for ${agents.length} agent(s)`);
