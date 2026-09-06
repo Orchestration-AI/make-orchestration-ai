@@ -30,15 +30,11 @@ export async function listMailAgents(): Promise<MailAgentIdentity[]> {
   return agents;
 }
 
-// --- Processed-thread tracking -------------------------------------------------
-// We track which threads an agent has already processed in our own KV store so
-// that read-state does not depend solely on the mutable server-side IMAP \Seen
-// flag (which can be flipped back by humans/other clients or fail to be set).
-//
-// The record stores the messageCount at the time of processing. A thread is
-// considered "already processed" only if the current messageCount is not greater
-// than the recorded one, so genuinely new replies (higher messageCount) correctly
-// re-surface the thread.
+// --- Processed-thread tracking (poll-side) -------------------------------------
+// The mail poll is the single place that decides whether a thread has been
+// handled. When it sees an unseen thread it enqueues a ticker task and records
+// the thread here so subsequent polls ignore it. The recorded messageCount lets
+// genuinely new replies (higher messageCount) re-surface the thread.
 
 export type ProcessedThread = {
   messageCount: number;
