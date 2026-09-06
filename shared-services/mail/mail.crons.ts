@@ -1,8 +1,8 @@
 import { createApiClient } from "@orchestration-ai/sdk/services";
 import { settingFindByAgent, layerFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
-import { listMailAgents, unregisterMailAgent, isThreadAlreadyProcessed } from "./mail.kv.ts";
-import { getImapCredentials, fetchUnseen } from "./imap.proxy.ts";
+import { listMailAgents, unregisterMailAgent, isThreadAlreadyProcessed, markThreadProcessed } from "./mail.kv.ts";
+import { getImapCredentials, fetchUnseen, markThreadSeen } from "./imap.proxy.ts";
 import { enqueueIfNotPending } from "./mail.tasks.ts";
 import { MAIL_SERVICE_UNIQUE_NAME } from "./mail.constants.ts";
 import type { Setting } from "@orchestration-ai/sdk/services";
@@ -47,9 +47,8 @@ Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
       console.log(`[mail:cron] Agent ${agent.agentId}: ${threads.length} unseen thread(s)`);
 
       for (const thread of threads) {
-        // Skip threads we've already processed in our own KV, independent of the
-        // server-side \Seen flag. A higher messageCount means a new reply arrived,
-        // so those correctly fall through and get re-enqueued.
+        // The poll is the single source of truth for read-state. If we've already
+        // processed this thread (and no new replies have arrived), skip it.
         if (await isThreadAlreadyProcessed(agent.agentId, thread.threadId, thread.messageCount)) {
           console.log(`[mail:cron] Thread ${thread.threadId} already processed - skipping`);
           continue;
@@ -69,6 +68,10 @@ Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
           message,
           apiClient,
         );
+
+        // Record processed-state so later polls ignore this thread. This is our
+        // authoritative record and does not depend on the server-side flag.
+        await markThreadProcessed(agent.agentId, thread.threadId, thread.messageCount);
       }
     } catch (err) {
       console.warn(`[mail:cron] Error polling agent ${agent.agentId}:`, err);
