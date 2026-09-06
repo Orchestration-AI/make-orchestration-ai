@@ -1,7 +1,7 @@
 import { createApiClient } from "@orchestration-ai/sdk/services";
 import { settingFindByAgent, layerFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
-import { listMailAgents, unregisterMailAgent } from "./mail.kv.ts";
+import { listMailAgents, unregisterMailAgent, isThreadAlreadyProcessed } from "./mail.kv.ts";
 import { getImapCredentials, fetchUnseen } from "./imap.proxy.ts";
 import { enqueueIfNotPending } from "./mail.tasks.ts";
 import { MAIL_SERVICE_UNIQUE_NAME } from "./mail.constants.ts";
@@ -47,6 +47,14 @@ Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
       console.log(`[mail:cron] Agent ${agent.agentId}: ${threads.length} unseen thread(s)`);
 
       for (const thread of threads) {
+        // Skip threads we've already processed in our own KV, independent of the
+        // server-side \Seen flag. A higher messageCount means a new reply arrived,
+        // so those correctly fall through and get re-enqueued.
+        if (await isThreadAlreadyProcessed(agent.agentId, thread.threadId, thread.messageCount)) {
+          console.log(`[mail:cron] Thread ${thread.threadId} already processed - skipping`);
+          continue;
+        }
+
         const attachmentNote = thread.attachmentFilenames.length
           ? `\nAttachments: ${thread.attachmentFilenames.join(", ")}`
           : "";

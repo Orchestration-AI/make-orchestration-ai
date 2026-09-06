@@ -105,11 +105,25 @@ export async function fetchMessage(credentials: ImapCredentials, uid: string): P
 }
 
 export async function markThreadSeen(credentials: ImapCredentials, threadId: string): Promise<void> {
-  await callImapProxy("MARK_SEEN", { credentials, threadId });
+  // Best-effort: marking seen must never break the read flow, so swallow errors.
+  // Pass the same id as both threadId and uid so the proxy marks the message
+  // seen whether it treats the id as a thread id or a message uid.
+  try {
+    await callImapProxy("MARK_SEEN", { credentials, threadId, uid: threadId });
+  } catch (err) {
+    console.warn(`[mail] Failed to mark thread ${threadId} seen (ignored):`, err);
+  }
 }
 
 export async function markMessageSeen(credentials: ImapCredentials, uid: string): Promise<void> {
-  await callImapProxy("MARK_SEEN", { credentials, uid });
+  // Best-effort: marking seen must never break the read flow, so swallow errors.
+  // Pass the same id as both uid and threadId so the proxy marks seen whether
+  // it treats the id as a message uid or a thread id.
+  try {
+    await callImapProxy("MARK_SEEN", { credentials, uid, threadId: uid });
+  } catch (err) {
+    console.warn(`[mail] Failed to mark message ${uid} seen (ignored):`, err);
+  }
 }
 
 export async function appendToSent(credentials: ImapCredentials, rawMessage: string): Promise<void> {
