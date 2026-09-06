@@ -4,7 +4,7 @@ import { settingFindByAgent, linkCreate } from "@orchestration-ai/sdk/sdk.gen";
 import { defaultSettings, smtpSelfEmailSettingKey, bodyMaxCharsSettingKey } from "./mail.constants.ts";
 import { getDescriptionForContext } from "./mail.description.ts";
 import { sendMarkdownMail, sendHtmlMail, replyToThread } from "./mail.service.ts";
-import { registerMailAgent } from "./mail.kv.ts";
+import { registerMailAgent, markThreadProcessed } from "./mail.kv.ts";
 import { getImapCredentials, fetchList, fetchThread, fetchMessage, markThreadSeen, markMessageSeen } from "./imap.proxy.ts";
 import { getTextSetting } from "@orchestration-ai/sdk/services";
 import { storeAttachments } from "./mail.attachments.ts";
@@ -171,6 +171,10 @@ export const mailService = defineServiceWithDynamicDescription({
           stored.push({ ...msg, body: await extractPlainText(msg.body, bodyMaxChars), attachments });
         }
         await markThreadSeen(credentials, body.threadId);
+        // Authoritative read-state: record in our own KV using the number of
+        // messages we actually read. This is independent of the \Seen flag, so
+        // the poll won't re-surface this thread unless a new reply arrives.
+        await markThreadProcessed(context.identity.agentId, body.threadId, messages.length);
         return stored;
       }
 
