@@ -33,11 +33,17 @@ export async function listMailAgents(): Promise<MailAgentIdentity[]> {
 // --- Processed-thread tracking (poll-side) -------------------------------------
 // The mail poll is the single place that decides whether a thread has been
 // handled. When it sees an unseen thread it enqueues a ticker task and records
-// the thread here so subsequent polls ignore it. The recorded messageCount lets
-// genuinely new replies (higher messageCount) re-surface the thread.
+// the thread here so subsequent polls ignore it.
+//
+// Change detection uses the latest IMAP INTERNALDATE seen for the thread rather
+// than a message count. INTERNALDATE is the server's receipt time, assigned on
+// arrival, so any new reply carries a timestamp >= the newest message we've
+// already processed — even when threading collapses replies into a single visible
+// message (which made messageCount unreliable, since FETCH_UNSEEN only counts
+// currently-unseen messages and resets after a thread is marked seen).
 
 export type ProcessedThread = {
-  messageCount: number;
+  lastInternalDate: string;
   processedAt: string;
 };
 
@@ -47,10 +53,10 @@ const PROCESSED_THREAD_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 export async function markThreadProcessed(
   agentId: string,
   threadId: string,
-  messageCount: number,
+  lastInternalDate: string,
 ): Promise<void> {
   const record: ProcessedThread = {
-    messageCount,
+    lastInternalDate,
     processedAt: new Date().toISOString(),
   };
   await kv.set(["mail_processed", agentId, threadId], record, {
@@ -66,14 +72,16 @@ export async function getProcessedThread(
   return entry.value;
 }
 
-// A thread is already processed if we have a record whose messageCount is >= the
-// current messageCount (i.e. no new messages have arrived since we processed it).
+// A thread is already processed if we have a record whose lastInternalDate is >=
+// the current one (i.e. no message newer than what we processed has arrived). ISO
+// 8601 UTC strings compare lexicographically in chronological order, so a plain
+// string comparison is a valid time comparison.
 export async function isThreadAlreadyProcessed(
   agentId: string,
   threadId: string,
-  currentMessageCount: number,
+  currentLastInternalDate: string,
 ): Promise<boolean> {
   const record = await getProcessedThread(agentId, threadId);
   if (!record) return false;
-  return currentMessageCount <= record.messageCount;
+  return currentLastInternalDate <= record.lastInternalDate;
 }
