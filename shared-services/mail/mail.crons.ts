@@ -48,8 +48,10 @@ Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
 
       for (const thread of threads) {
         // The poll is the single source of truth for read-state. If we've already
-        // processed this thread (and no new replies have arrived), skip it.
-        if (await isThreadAlreadyProcessed(agent.agentId, thread.threadId, thread.messageCount)) {
+        // processed this thread (and no newer message has arrived), skip it.
+        // Change detection is by latest INTERNALDATE, which reliably catches
+        // replies even when threading collapses them into one message.
+        if (await isThreadAlreadyProcessed(agent.agentId, thread.threadId, thread.lastInternalDate)) {
           console.log(`[mail:cron] Thread ${thread.threadId} already processed - skipping`);
           continue;
         }
@@ -71,7 +73,7 @@ Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
 
         // Record processed-state so later polls ignore this thread. This is our
         // authoritative record and does not depend on the server-side flag.
-        await markThreadProcessed(agent.agentId, thread.threadId, thread.messageCount);
+        await markThreadProcessed(agent.agentId, thread.threadId, thread.lastInternalDate);
       }
     } catch (err) {
       console.warn(`[mail:cron] Error polling agent ${agent.agentId}:`, err);

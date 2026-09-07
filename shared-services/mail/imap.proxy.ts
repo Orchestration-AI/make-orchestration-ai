@@ -23,6 +23,10 @@ export type EmailThread = {
   from: string;
   date: string;
   messageCount: number;
+  // Latest IMAP INTERNALDATE (server receipt time) across the thread's messages,
+  // as an ISO string. Server-assigned on arrival, so a new reply always yields a
+  // value >= the newest already-seen message — the reliable change signal.
+  lastInternalDate: string;
   attachmentFilenames: string[];
 };
 
