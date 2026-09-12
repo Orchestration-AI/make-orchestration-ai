@@ -18,6 +18,35 @@ export type MailAgentIdentity = {
   layerId: string;
 };
 
+// --- DEBUG ---------------------------------------------------------------------
+// Dumps the ENTIRE KV keyspace for the timeline this code runs on. Use only for
+// diagnostics: it scans every key (empty prefix). `limit` caps how many entries
+// are printed so a large store can't flood the logs.
+export async function dumpKv(limit = 500): Promise<void> {
+  const kv = await getKv();
+  console.log("[mail:kv:dump] ===== BEGIN full KV dump =====");
+  let count = 0;
+  const iter = kv.list({ prefix: [] });
+  for await (const entry of iter) {
+    if (count >= limit) {
+      console.log(`[mail:kv:dump] ...reached limit of ${limit} entries, stopping`);
+      break;
+    }
+    count++;
+    let valueStr: string;
+    try {
+      valueStr = JSON.stringify(entry.value);
+    } catch {
+      valueStr = String(entry.value);
+    }
+    console.log(
+      `[mail:kv:dump] key=${JSON.stringify(entry.key)} versionstamp=${entry.versionstamp} value=${valueStr}`,
+    );
+  }
+  console.log(`[mail:kv:dump] ===== END full KV dump (${count} entr${count === 1 ? "y" : "ies"}) =====`);
+}
+// --- END DEBUG -----------------------------------------------------------------
+
 export async function registerMailAgent(identity: MailAgentIdentity): Promise<void> {
   const kv = await getKv();
   await kv.set(["mail_agent", identity.agentId], identity);

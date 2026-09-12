@@ -1,7 +1,7 @@
 import { createApiClient } from "@orchestration-ai/sdk/services";
 import { settingFindByAgent, layerFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
-import { listMailAgents, unregisterMailAgent, isThreadAlreadyProcessed, markThreadProcessed } from "./mail.kv.ts";
+import { listMailAgents, unregisterMailAgent, isThreadAlreadyProcessed, markThreadProcessed, dumpKv } from "./mail.kv.ts";
 import { getImapCredentials, fetchUnseen, markThreadSeen } from "./imap.proxy.ts";
 import { enqueueIfNotPending } from "./mail.tasks.ts";
 import { MAIL_SERVICE_UNIQUE_NAME } from "./mail.constants.ts";
@@ -22,9 +22,23 @@ function makeApiClient(workspaceOwnerId: string) {
 // Cron 1: Poll for new emails - every minute
 Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
   console.log("[mail:cron] Polling for new emails");
+  // Diagnostic: which deployment/timeline is this cron running on, and what does
+  // the mail-agent registry actually contain in THIS timeline's KV database?
+  // Deno Deploy gives each timeline (production, each git branch, previews) its
+  // own isolated KV DB, so `touch` writes on one timeline are invisible to a cron
+  // running on another. These logs make the timeline + registry state unambiguous.
+  console.log(
+    `[mail:cron] deployment=${Deno.env.get("DENO_DEPLOYMENT_ID") ?? "local"} region=${Deno.env.get("DENO_REGION") ?? "local"}`,
+  );
+  // DEBUG: dump the entire KV for this timeline so we can see exactly what's stored.
+  await dumpKv();
   const agents = await listMailAgents();
   if (!agents.length) {
-    console.log("[mail:cron] No registered mail agents - nothing to poll");
+    console.log(
+      "[mail:cron] No registered mail agents in this timeline's KV - nothing to poll. " +
+        "If agents ARE using mail, they were registered on a different timeline's KV database " +
+        "(e.g. touch ran on production but this cron is on the qa branch, or vice versa).",
+    );
     return;
   }
   console.log(`[mail:cron] Polling ${agents.length} agent(s) for new emails`);
