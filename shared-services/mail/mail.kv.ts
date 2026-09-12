@@ -1,4 +1,14 @@
-const kv = await Deno.openKv();
+// NOTE: Do NOT use a top-level `await Deno.openKv()` here. This module is in the
+// import graph of mail.crons.ts, and Deno Deploy registers `Deno.cron()` jobs by
+// evaluating top-level module code at deploy time. A top-level await interleaves
+// before the `Deno.cron()` call runs, which causes Deploy to silently drop the
+// cron registration ("Deno.cron must be called at top-level only"). Open KV
+// lazily instead so top-level evaluation stays synchronous.
+let _kv: Deno.Kv | null = null;
+async function getKv(): Promise<Deno.Kv> {
+  if (!_kv) _kv = await Deno.openKv();
+  return _kv;
+}
 
 export type MailAgentIdentity = {
   workspaceId: string;
@@ -9,10 +19,12 @@ export type MailAgentIdentity = {
 };
 
 export async function registerMailAgent(identity: MailAgentIdentity): Promise<void> {
+  const kv = await getKv();
   await kv.set(["mail_agent", identity.agentId], identity);
 }
 
 export async function unregisterMailAgent(agentId: string): Promise<void> {
+  const kv = await getKv();
   await kv.delete(["mail_agent", agentId]);
   // Also clear any processed-thread records for this agent so KV doesn't leak.
   const iter = kv.list({ prefix: ["mail_processed", agentId] });
@@ -22,6 +34,7 @@ export async function unregisterMailAgent(agentId: string): Promise<void> {
 }
 
 export async function listMailAgents(): Promise<MailAgentIdentity[]> {
+  const kv = await getKv();
   const agents: MailAgentIdentity[] = [];
   const iter = kv.list<MailAgentIdentity>({ prefix: ["mail_agent"] });
   for await (const entry of iter) {
@@ -55,6 +68,7 @@ export async function markThreadProcessed(
   threadId: string,
   lastInternalDate: string,
 ): Promise<void> {
+  const kv = await getKv();
   const record: ProcessedThread = {
     lastInternalDate,
     processedAt: new Date().toISOString(),
@@ -68,6 +82,7 @@ export async function getProcessedThread(
   agentId: string,
   threadId: string,
 ): Promise<ProcessedThread | null> {
+  const kv = await getKv();
   const entry = await kv.get<ProcessedThread>(["mail_processed", agentId, threadId]);
   return entry.value;
 }
