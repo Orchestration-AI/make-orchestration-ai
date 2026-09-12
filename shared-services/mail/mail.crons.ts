@@ -2,7 +2,7 @@ import { createApiClient } from "@orchestration-ai/sdk/services";
 import { settingFindByAgent, layerFindByAgent } from "@orchestration-ai/sdk/sdk.gen";
 import { setupClientCredentials } from "@orchestration-ai/sdk/oauth-utils";
 import { listMailAgents, unregisterMailAgent, isThreadAlreadyProcessed, markThreadProcessed } from "./mail.kv.ts";
-import { getImapCredentials, fetchUnseen, markThreadSeen } from "./imap.proxy.ts";
+import { getImapCredentials, fetchUnseen } from "./imap.proxy.ts";
 import { enqueueIfNotPending } from "./mail.tasks.ts";
 import { MAIL_SERVICE_UNIQUE_NAME } from "./mail.constants.ts";
 import type { Setting } from "@orchestration-ai/sdk/services";
@@ -34,6 +34,7 @@ Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
       const apiClient = makeApiClient(agent.workspaceOwnerId);
       const { data } = await settingFindByAgent({
         client: apiClient,
+        throwOnError: true,
         path: {
           workspaceId: agent.workspaceId,
           orchestrationId: agent.orchestrationId,
@@ -86,7 +87,7 @@ Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
 });
 
 // Cron 2: Cleanup agents that no longer have the mail service - every 15 minutes
-Deno.cron("mail-agent-cleanup", "*/59 * * * *", async () => {
+Deno.cron("mail-agent-cleanup", "*/45 * * * *", async () => {
   const agents = await listMailAgents();
   if (!agents.length) return;
   console.log(`[mail:cron] Cleanup check for ${agents.length} agent(s)`);
@@ -94,8 +95,11 @@ Deno.cron("mail-agent-cleanup", "*/59 * * * *", async () => {
   for (const agent of agents) {
     try {
       const apiClient = makeApiClient(agent.workspaceOwnerId);
+      // Use throwOnError so a non-2xx response goes to catch (and we skip
+      // deletion) instead of silently yielding empty data.
       const { data } = await layerFindByAgent({
         client: apiClient,
+        throwOnError: true,
         path: {
           workspaceId: agent.workspaceId,
           orchestrationId: agent.orchestrationId,
@@ -104,7 +108,22 @@ Deno.cron("mail-agent-cleanup", "*/59 * * * *", async () => {
         query: { limit: 100 },
       });
 
-      const layers = data?.layers ?? [];
+      // SAFETY: Only ever unregister on a POSITIVELY CONFIRMED "service absent"
+      // signal. A missing/undefined payload, or an empty layer list, is treated
+      // as "unknown" - we must NOT delete the registry entry in that case, or a
+      // transient/partial API response would flush every agent (a full registry
+      // wipe). This guards against the cleanup cron nuking the mail_agent store.
+      if (!data || !Array.isArray(data.layers)) {
+        console.warn(`[mail:cron] Cleanup: no layer data for agent ${agent.agentId} - skipping (not deleting)`);
+        continue;
+      }
+      const layers = data.layers;
+      if (layers.length === 0) {
+        // Zero layers is ambiguous (could be a partial response). Do not delete.
+        console.warn(`[mail:cron] Cleanup: agent ${agent.agentId} returned 0 layers - skipping (not deleting)`);
+        continue;
+      }
+
       const hasMailService = layers.some((layer) =>
         layer.services?.some((s) => s.unique_name === MAIL_SERVICE_UNIQUE_NAME)
       );
@@ -114,7 +133,9 @@ Deno.cron("mail-agent-cleanup", "*/59 * * * *", async () => {
         await unregisterMailAgent(agent.agentId);
       }
     } catch (err) {
-      console.warn(`[mail:cron] Error during cleanup check for agent ${agent.agentId}:`, err);
+      // On ANY error we intentionally keep the registry entry. Missing a cleanup
+      // is harmless (the poll re-checks credentials); an erroneous delete is not.
+      console.warn(`[mail:cron] Error during cleanup check for agent ${agent.agentId} - keeping registry entry:`, err);
     }
   }
 });
