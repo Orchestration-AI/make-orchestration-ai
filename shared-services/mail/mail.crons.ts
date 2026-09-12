@@ -21,6 +21,7 @@ function makeApiClient(workspaceOwnerId: string) {
 
 // Cron 1: Poll for new emails - every minute
 Deno.cron("mail-email-poll", "*/45 * * * *", async () => {
+  console.log("[mail:cron] Polling for new emails");
   const agents = await listMailAgents();
   if (!agents.length) return;
   console.log(`[mail:cron] Polling ${agents.length} agent(s) for new emails`);
