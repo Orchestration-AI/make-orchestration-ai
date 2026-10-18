@@ -19,6 +19,7 @@ import { timeService } from "./time/time.service.definition.ts";
 import { oaiSandboxService } from "./oai-sandbox/oai-sandbox.service.definition.ts";
 import { contactsService } from "./contacts/contacts.service.definition.ts";
 import { remindersService } from "./reminders/reminders.service.definition.ts";
+import { notionService } from "./notion/notion.service.definition.ts";
 import { handleContactsInit, handleContactsAgents, handleContactsSave } from "./contacts/contacts.handlers.ts";
 import { registerQueueListener } from "./oai-sandbox/oai-sandbox.service.ts";
 import { handleConfigInit, handleConfigSave, handleJobsList, handleJobCancel, handleJobOutput, handleJobStop, handleResetCounter } from "./oai-sandbox/oai-sandbox.handlers.ts";
@@ -73,7 +74,8 @@ const app = createApp()
   .service(internetService)
   .service(timeService)
   .service(contactsService)
-  .service(remindersService);
+  .service(remindersService)
+  .service(notionService);
   // .service(oaiSandboxService);
 
 // Custom: contacts GUI

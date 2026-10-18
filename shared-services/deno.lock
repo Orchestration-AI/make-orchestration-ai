@@ -17,6 +17,7 @@
     "jsr:@std/path@0.217": "0.217.0",
     "jsr:@std/path@0.217.0": "0.217.0",
     "npm:@deno/sandbox@*": "0.13.2",
+    "npm:@notionhq/client@5.27.1": "5.27.1",
     "npm:@orchestration-ai/sdk@0.23.0": "0.23.0",
     "npm:@resvg/resvg-wasm@*": "2.6.2",
     "npm:@types/express@5.0.0": "5.0.0",
@@ -433,6 +434,9 @@
         "@napi-rs/canvas-linux-x64-musl",
         "@napi-rs/canvas-win32-x64-msvc"
       ]
+    },
+    "@notionhq/client@5.27.1": {
+      "integrity": "sha512-WedYyPNMpQbE4Dz5h7zHTsh03veUGqBzxWyztbIh0tNbgHU+XbDi/jc1KgL3j1p8y06nHLEmGYygntwICxJUNw=="
     },
     "@opentelemetry/api@1.9.1": {
       "integrity": "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="
@@ -2163,6 +2167,7 @@
     "dependencies": [
       "jsr:@std/assert@1",
       "npm:@deno/sandbox@*",
+      "npm:@notionhq/client@5.27.1",
       "npm:@orchestration-ai/sdk@0.23.0",
       "npm:express@5.0.0",
       "npm:markitdown-ts@0.0.10",

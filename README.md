@@ -97,6 +97,7 @@ A Deno application that bundles a collection of ready-made services for Orchestr
 | `time` | Date/time utilities |
 | `contacts` | Agent contact management with a config UI |
 | `reminders` | Agent reminder scheduling via ticker tasks |
+| `notion` | Notion workspace integration via the official Notion SDK, with OAI file bridging |
 
 ### Prerequisites
 

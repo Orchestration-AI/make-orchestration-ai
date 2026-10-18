@@ -12,6 +12,7 @@
     "@orchestration-ai/sdk/oauth-utils": "npm:@orchestration-ai/sdk@0.23.0/oauth-utils",
     "@orchestration-ai/sdk/streaming": "npm:@orchestration-ai/sdk@0.23.0/streaming",
     "@orchestration-ai/sdk/logging-publisher": "npm:@orchestration-ai/sdk@0.23.0/logging-publisher",
+    "@notionhq/client": "npm:@notionhq/client@5.27.1",
     "express": "npm:express@5.0.0",
     "mathjs": "npm:mathjs@^15.1.0",
     "mssql": "npm:mssql@^11.0.1",
