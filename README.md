@@ -8,6 +8,7 @@ This monorepo contains three independently usable components:
 |-----------|-------------|----------|
 | [`sdk/`](#typescript-sdk) | TypeScript SDK for building OAI applications | TypeScript |
 | [`shared-services/`](#shared-services) | Pre-built agent services deployable on Deno Deploy | TypeScript / Deno |
+| [`create-installer/`](#orchestration-installers) | Scaffolder for orchestration installers | TypeScript / Node |
 | [terraform-provider-orchestration-ai](https://github.com/Orchestration-AI/terraform-provider-orchestration-ai) | Terraform provider for managing OAI resources | Go |
 
 ---
@@ -139,6 +140,129 @@ Pushes to `qa` trigger a staging deploy. Merges to `main` trigger a production d
 1. Create a new directory under `shared-services/` (e.g. `my-service/`)
 2. Define the service in `my-service/my-service.service.definition.ts` using `defineService` or `defineServiceWithDynamicDescription` from the SDK
 3. Register it in [`shared-services/app.ts`](shared-services/app.ts) with `.service(myService)`
+
+---
+
+## Orchestration Installers
+
+An **installer** lets a developer package a whole orchestration (agents, layers,
+settings, files, and third-party connections) behind a shareable install link.
+A visitor opens the link, sees a landing page describing what will be installed,
+authorizes with `role_admin`, picks (or creates) a workspace, completes any
+custom setup steps, and applies — all without writing Terraform.
+
+Installers are built with the SDK's `@orchestration-ai/sdk/installer` module and
+scaffolded with `@orchestration-ai/create-installer`.
+
+### Declaring an installer
+
+```typescript
+import { defineOrchestration } from "@orchestration-ai/sdk/installer";
+
+export const myInstaller = defineOrchestration({
+  installer_name: "Sales Copilot",
+  installer_version: "1.0.0",
+  tagline: "An AI sales team that triages leads and drafts follow-ups.",
+  required_scope: "role_admin",
+  orchestration: {
+    orchestration_name: "sales-copilot",
+    orchestration_description: "Triages inbound leads and drafts follow-ups.",
+    files: [{ path: "playbook.md", content: "# Playbook" }],
+    agents: [{
+      agent_name: "triage",
+      agent_description: "Classifies inbound leads.",
+      layers: [{ layer_name: "classify", context_md: "Classify leads.", services: ["messaging"] }],
+      settings: [{ setting_name: "crm_region", setting_description: "Region", setting_type: "Text", default: "eu" }],
+    }],
+  },
+});
+```
+
+### Serving it
+
+```typescript
+import { createInstaller } from "@orchestration-ai/sdk/installer";
+import { myInstaller } from "./my.installer";
+
+createInstaller(myInstaller, {
+  oauthClientId: process.env.INSTALLER_OAUTH_CLIENT_ID,
+  oauthClientSecret: process.env.INSTALLER_OAUTH_CLIENT_SECRET,
+  oauthRedirectUri: process.env.INSTALLER_OAUTH_REDIRECT_URI,
+}).listen(3002);
+```
+
+| Route | Purpose |
+|-------|---------|
+| `GET /` | Public landing page (the advertised install link) |
+| `GET /install` | Install wizard + OAuth redirect target |
+| `POST /api/apply` | Runs the install, streaming progress over SSE |
+| `POST /api/uninstall` | Removes the orchestration and runs custom-step teardown |
+
+Each installer uses its **own** OAuth client, so the consent screen shows the
+installer's application name. The client secret stays server-side.
+
+### Custom steps
+
+Installers can include custom HTML5 steps that connect third-party services
+(e.g. a CRM via OAuth). A step emits settings and an `undo_state`; the framework
+merges the settings into the orchestration and stores the `undo_state` so the
+step's `uninstall` hook can revoke the third-party connection on teardown.
+
+### Lifecycle hooks
+
+An installer can define `onInstalled` and `onUninstalled` hooks that run
+server-side once per install/uninstall — e.g. send a greeting email to the
+client after installation. They receive the API client, workspace/orchestration
+ids, the install record, and (for `onInstalled`) the applied settings. Hook
+errors are reported but never roll back the operation.
+
+```typescript
+defineOrchestration({
+  // ...
+  onInstalled: async (ctx) => {
+    // ctx.workspaceId, ctx.orchestrationId, ctx.record, ctx.settings
+    await sendGreetingEmail(ctx.settings);
+  },
+  onUninstalled: async (ctx) => {
+    await notifyRemoval(ctx.orchestrationId);
+  },
+});
+```
+
+### LLM selection & fallback
+
+Layers reference an LLM **by name** (not id), resolved against the installing
+user's available LLMs at apply time:
+
+```typescript
+layers: [{
+  layer_name: "main",
+  llm_name: "claude-sonnet-5",            // preferred
+  fallback_llm_name: "gemini-2.5-flash:oai", // if the user lacks the preferred one
+}]
+```
+
+Not every user has every model — Anthropic/OpenAI models only appear after the
+user loads their keys. If the preferred `llm_name` is unavailable, the installer
+falls back to `fallback_llm_name`, then to the platform-guaranteed
+`gemini-2.5-flash:oai`. Before installing, the wizard shows an **LLMs** step
+(only when a fallback would apply) listing each layer's requested vs. effective
+model, a link to load keys at
+[console.orchestration-ai.com/llm-keys](https://console.orchestration-ai.com/llm-keys),
+and a refresh / auto-refresh (new models can take up to ~1 minute to appear).
+
+### Scaffolding
+
+```bash
+# New project
+npx @orchestration-ai/create-installer "Sales Copilot"
+
+# Into an existing project (e.g. shared-services), with wiring + a custom-step example
+npx @orchestration-ai/create-installer --into shared-services --name "Sales Copilot" --wire --custom-step
+```
+
+See [`examples/sales-copilot-installer/`](examples/sales-copilot-installer) for a
+complete, standalone worked example.
 
 ---
 

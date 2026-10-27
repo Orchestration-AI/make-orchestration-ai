@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: Inter, -apple-system, sans-serif; color: #e6edf3; background: #10151c; margin: 0; padding: 24px; }
+    button { background: #40babd; color: #fff; border: none; border-radius: 9999px; padding: 10px 22px; font: inherit; cursor: pointer; }
+    button:hover { background: #339597; }
+    .status { margin-top: 14px; font-size: 13px; color: #8b949e; }
+    .status.done { color: #75c181; }
+  </style>
+</head>
+<body>
+  <p>Connect your CRM so Sales Copilot can read leads and send follow-ups.</p>
+  <button id="connect">Connect CRM</button>
+  <div class="status" id="status"></div>
+
+  <script>
+    // A real step opens the CRM OAuth consent (pointing its redirect at this
+    // step's /callback route). For the example we simulate a success and emit
+    // the result directly via the injected window.oaiStep helper.
+    document.getElementById('connect').addEventListener('click', function () {
+      document.getElementById('status').textContent = 'Connecting…';
+      setTimeout(function () {
+        window.oaiStep.complete({
+          settings: [
+            { agent_name: 'follow-up', setting_name: 'crm_api_key', setting_type: 'Secret', value: 'demo-crm-key' }
+          ],
+          undo_state: { connection_id: 'conn_demo' }
+        });
+        var s = document.getElementById('status');
+        s.textContent = '✓ CRM connected';
+        s.className = 'status done';
+      }, 500);
+    });
+  </script>
+</body>
+</html>

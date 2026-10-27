@@ -1,0 +1,18 @@
+// {{name}} installer entrypoint.
+//
+// Serves the public landing page + install wizard. Each installer uses its own
+// OAuth client; set the env vars below before running.
+
+import { createInstaller } from "@orchestration-ai/sdk/installer";
+import { {{varName}} } from "./{{slug}}.installer{{importExt}}";
+
+const installer = createInstaller({{varName}}, {
+  // These come from the OAuth application you registered for THIS installer.
+  oauthClientId: process.env.INSTALLER_OAUTH_CLIENT_ID,
+  oauthClientSecret: process.env.INSTALLER_OAUTH_CLIENT_SECRET,
+  oauthRedirectUri: process.env.INSTALLER_OAUTH_REDIRECT_URI, // e.g. https://install.example.com/install
+  // apiBaseUrl: "https://api.orchestration-ai.com", // override for staging
+  // basePath: "",                                   // set if mounted under a path
+});
+
+installer.listen(process.env.PORT || 3002);

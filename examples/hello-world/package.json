@@ -1,0 +1,23 @@
+{
+  "name": "hello-world-installer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hello World — Orchestration AI installer",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:sdk": "npm --prefix ../../sdk run build:esm && npm --prefix ../../sdk run build:cjs",
+    "start": "npm run build:sdk && tsx --env-file=.env install.ts",
+    "typecheck": "npm run build:sdk && tsc --noEmit"
+  },
+  "dependencies": {
+    "@orchestration-ai/sdk": "file:../../sdk",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

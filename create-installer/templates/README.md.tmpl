@@ -1,0 +1,47 @@
+# {{name}} installer
+
+An Orchestration AI installer. Visitors open the install link, see a landing
+page describing what will be installed, authorize with `role_admin`, pick a
+workspace, and apply.
+
+## Files
+
+- `{{slug}}.installer.ts` — the orchestration definition (agents, layers, settings, files).
+- `install.ts` — the server entrypoint (`createInstaller(...).listen()`).
+- `custom-steps/` — optional HTML + server logic for third-party connections.
+
+## Running
+
+Set the OAuth app credentials registered for this installer:
+
+```bash
+export INSTALLER_OAUTH_CLIENT_ID=...
+export INSTALLER_OAUTH_CLIENT_SECRET=...
+export INSTALLER_OAUTH_REDIRECT_URI=https://install.example.com/install
+```
+
+Then start it:
+
+```bash
+# Node
+npx tsx install.ts
+
+# Deno
+deno run --allow-all --env-file install.ts
+```
+
+Open http://localhost:3002/ for the landing page.
+
+## Routes
+
+| Route | Purpose |
+|-------|---------|
+| `GET /` | Public landing page |
+| `GET /install` | Install wizard (OAuth redirect target) |
+| `POST /api/apply` | Runs the install (SSE progress) |
+| `POST /api/uninstall` | Tears the install down |
+
+## Uninstall
+
+Uninstall removes the created orchestration and runs each custom step's
+`uninstall` hook so third-party side effects are cleaned up.

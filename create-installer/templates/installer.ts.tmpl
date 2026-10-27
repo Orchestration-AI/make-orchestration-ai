@@ -1,0 +1,81 @@
+// {{name}} — Orchestration AI installer definition.
+//
+// Declares the orchestration (agents, layers, settings, files) that will be
+// created when a user installs this. The workspace is chosen by the user at
+// install time. Field names mirror the OAI REST API.
+
+import { defineOrchestration } from "@orchestration-ai/sdk/installer";{{customStepImport}}
+
+export const {{varName}} = defineOrchestration({
+  installer_name: "{{name}}",
+  installer_version: "1.0.0",
+  publisher: {
+    name: "Your Company",
+    url: "https://example.com",
+    // logo_url: "/logo.svg",
+  },
+  tagline: "A short pitch shown on the landing page.",
+  description_md: `
+{{name}} installs a ready-to-run orchestration into your Orchestration AI workspace.
+
+Describe what it does, who it's for, and what it will create.
+  `.trim(),
+  highlights: [
+    "Works out of the box",
+    "Runs 24/7",
+    "Fully configurable",
+  ],
+  required_scope: "role_admin",
+
+  orchestration: {
+    orchestration_name: "{{slug}}",
+    orchestration_description: "What this orchestration does.",
+
+    // OAI files uploaded at orchestration scope (optional).
+    files: [
+      { path: "playbook.md", content: "# Playbook\n\nShared context for all agents." },
+    ],
+
+    agents: [
+      {
+        agent_name: "assistant",
+        agent_description: "The primary agent.",
+        vm_enabled: false,
+        layers: [
+          {
+            layer_name: "main",
+            context_md: "You are a helpful assistant for {{name}}.",
+            temperature: 0.7,
+            // Preferred LLM by name. If the user doesn't have it, the installer
+            // falls back to `fallback_llm_name`, then to the platform-guaranteed
+            // "gemini-2.5-flash:oai".
+            llm_name: "claude-sonnet-5",
+            // fallback_llm_name: "gemini-2.5-flash:oai",
+            // Attach services by their logical unique_name; resolved at install time.
+            // services: ["messaging", "mail"],
+          },
+        ],
+        settings: [
+          {
+            setting_name: "greeting",
+            setting_description: "Greeting the agent uses.",
+            setting_type: "Text",
+            default: "Hello!",
+          },
+        ],
+        // Agent-scoped OAI files (optional).
+        // files: [{ path: "config/defaults.json", content: "{}" }],
+      },
+    ],
+  },{{customStepBlock}}
+
+  // Optional lifecycle hooks. Run server-side; errors are reported but do not
+  // roll back a successful install/uninstall.
+  // onInstalled: async (ctx) => {
+  //   // Ping third-party systems — e.g. send a greeting email to the client.
+  //   // ctx.workspaceId, ctx.orchestrationId, ctx.record, ctx.settings
+  // },
+  // onUninstalled: async (ctx) => {
+  //   // Notify third-party systems that the installation was removed.
+  // },
+});

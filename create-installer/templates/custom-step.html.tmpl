@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: Inter, -apple-system, sans-serif; color: #e6edf3; background: #10151c; margin: 0; padding: 24px; }
+    button { background: #40babd; color: #fff; border: none; border-radius: 9999px; padding: 10px 22px; font: inherit; cursor: pointer; }
+    button:hover { background: #339597; }
+    .status { margin-top: 14px; font-size: 13px; color: #8b949e; }
+    .status.done { color: #75c181; }
+  </style>
+</head>
+<body>
+  <p>Connect your account to {{name}}.</p>
+  <button id="connect">Connect Example Service</button>
+  <div class="status" id="status"></div>
+
+  <script>
+    // In a real step, open the third-party OAuth popup pointing at the step's
+    // /callback route. Here we simulate a successful connection.
+    document.getElementById('connect').addEventListener('click', function () {
+      document.getElementById('status').textContent = 'Connecting…';
+      setTimeout(function () {
+        // window.oaiStep is injected by the installer framework.
+        window.oaiStep.complete({
+          settings: [
+            { agent_name: 'assistant', setting_name: 'example_token', setting_type: 'Secret', value: 'demo-token' }
+          ],
+          undo_state: { connection_id: 'conn_demo' }
+        });
+        var s = document.getElementById('status');
+        s.textContent = '✓ Connected';
+        s.className = 'status done';
+      }, 500);
+    });
+  </script>
+</body>
+</html>

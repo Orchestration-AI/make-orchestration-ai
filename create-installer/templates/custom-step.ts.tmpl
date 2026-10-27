@@ -1,0 +1,44 @@
+// Example custom step for {{name}}.
+//
+// A custom step renders HTML inside the wizard and can perform a third-party
+// OAuth/connection. It emits settings + an `undo_state` the framework stores so
+// `uninstall` can later tear down whatever this step created externally.
+
+import type { CustomStepDef, CustomStepUninstallContext } from "@orchestration-ai/sdk/installer";
+// @deno-types="npm:@types/express@5.0.0"
+import type { Request, Response } from "express";
+
+export const connectExampleStep: CustomStepDef = {
+  id: "connect-example",
+  title: "Connect Example Service",
+  description_md: "Authorize access to the example third-party service.",
+
+  // HTML served inside the wizard (sandboxed iframe). `window.oaiStep.complete`
+  // is injected by the framework.
+  html: "./custom-steps/connect-example.html",
+
+  // Optional server routes this step hosts (e.g. an OAuth callback).
+  routes: {
+    "GET /callback": async (_req: Request, res: Response) => {
+      // Exchange `req.query.code` with the third party here, then show a page
+      // that calls window.parent-side completion. For the example we just ack.
+      res.type("html").send(`<!doctype html><script>
+        window.parent && window.parent.postMessage(
+          { type: "oai:step-result", stepId: "connect-example",
+            result: { settings: [{ agent_name: "assistant", setting_name: "example_token",
+                                   setting_type: "Secret", value: "demo-token" }],
+                      undo_state: { connection_id: "conn_demo" } } },
+          "*");
+        document.body.innerHTML = "Connected. You can close this.";
+      </script>`);
+    },
+  },
+
+  // Teardown invoked on uninstall (and on rollback if this step completed).
+  uninstall: async (ctx: CustomStepUninstallContext) => {
+    const connectionId = ctx.undo_state.connection_id;
+    if (!connectionId) return;
+    // Revoke the third-party connection using connectionId here.
+    console.log(`Tearing down example connection ${connectionId}`);
+  },
+};

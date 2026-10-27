@@ -1,0 +1,30 @@
+{
+  "name": "@orchestration-ai/create-installer",
+  "version": "0.1.0",
+  "description": "Scaffold an Orchestration AI installer into a new or existing project",
+  "license": "MIT",
+  "author": "Orchestration AI",
+  "type": "module",
+  "bin": {
+    "create-oai-installer": "./bin/create-installer.js",
+    "create-installer": "./bin/create-installer.js"
+  },
+  "files": [
+    "bin",
+    "templates"
+  ],
+  "keywords": [
+    "orchestration-ai",
+    "installer",
+    "scaffold",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Orchestration-AI/make-orchestration-ai.git",
+    "directory": "create-installer"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

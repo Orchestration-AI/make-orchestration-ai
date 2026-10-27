@@ -1,0 +1,22 @@
+{
+  "name": "{{slug}}-installer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "{{name}} — Orchestration AI installer",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "tsx install.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orchestration-ai/sdk": "^{{sdkVersion}}",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}
