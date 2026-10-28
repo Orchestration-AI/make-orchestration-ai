@@ -19,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES = join(__dirname, "..", "templates");
 
 // SDK version pinned into generated standalone package.json. Bump on release.
-const DEFAULT_SDK_VERSION = "0.31.0";
+const DEFAULT_SDK_VERSION = "0.32.0";
 
 // --- arg parsing -----------------------------------------------------------
 

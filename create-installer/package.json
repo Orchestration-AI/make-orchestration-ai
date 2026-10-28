@@ -1,6 +1,6 @@
 {
   "name": "@orchestration-ai/create-installer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scaffold an Orchestration AI installer into a new or existing project",
   "license": "MIT",
   "author": "Orchestration AI",
